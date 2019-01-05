@@ -35,16 +35,13 @@ class LidarSeg:
         self.bridge = CvBridge()
 
 
-    def add_lidar(T_imu2lidar):
-        self.imu2lidar = T_imu2lidar
-    
-    def add_cam(instrinsic_mat, imu2cam):
+    def add_cam(instrinsic_mat, cam2lidar):
         """
         param: intrinsic_mat: 3x4 
                extrinsic_mat: 4x4, imu2cam
         """
         self.intrinsic.append(intrinsic_mat)
-        self.cam2lidar.append(np.linalg.inv(imu2cam) *self.imu2lidar)
+        self.cam2lidar.append( cam2lidar )
 
     def project_lidar_to_seg(lidar, rgb_img, camera_ind):
         """
@@ -55,7 +52,7 @@ class LidarSeg:
         T_c2l = self.cam2lidar[camera_ind]
         lidar_in_cam = np.matmul(T_c2l, lidar)
         projected_lidar_2d = np.matmul(self.intrinsic[camera_ind], lidar_in_cam)
-        labels = np.zeros((1, ))
+        labels = np.zeros((1, lidar.shape[1] ))
 
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
@@ -68,12 +65,6 @@ class LidarSeg:
 
     
 
-if __name__ == "__main__":
-
-    lidar_seg = LidarSeg("graph_optimized_320p.pb")
-
-    
-    lidar_seg.add_cam()
 
     
     

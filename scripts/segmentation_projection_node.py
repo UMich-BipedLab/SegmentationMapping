@@ -26,17 +26,19 @@ class SegmentationProjectionNode:
 
         # lidar subscription
         lidar_topic = rospy.get_param('lidar')
-        lidar_trans = rospy.get_param()
-        self.lidar_seg.add_lidar(lidar_trans)
         lidar_sub   = message_filters.Subscriber(lidar_topic, PointCloud2)
 
         # multiple camera subscription
         camera_num  = rospy.get_param('camera_num')
         image_topic_list = []
         sub_list   = [lidar_sub]
+
         for i in range(camera_num):
-            image_topic_list.append( rospy.get_param('image_'+str(i)) )    
-            lidar_seg.add_cam()
+            image_topic_list.append( rospy.get_param('image_'+str(i)) )
+            cam2lidar_file = rospy.get_param('cam2lidar_file_'+str(i))
+            intrinsic_file = rospy.get_param('cam_instrinsic_file_'+str(i))
+            T_cam2lidar = np.load(cam2lidar_file)
+            lidar_seg.add_cam(intrinsic_file, T_cam2lidar)
             sub_list.append(message_filters.Subscriber(image_topic_list[i], Image))
         
         # construct message filter
