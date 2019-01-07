@@ -57,10 +57,10 @@ class LidarSeg:
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
             print("coordinate "+str((u,v,d)))
-            label = out[u, v]
+            labels[col] =  out[u, v]
 
 
-        return projected_lidar_2d
+        return labels
         
 
     
