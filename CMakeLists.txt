@@ -161,7 +161,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-   scripts/segmentation_projection_node.py    scripts/projection.py
+   scripts/segmentation_projection_node    scripts/projection.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 
