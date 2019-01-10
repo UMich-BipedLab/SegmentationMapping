@@ -4,10 +4,10 @@
 
     <!-- ARGS -->
     <arg name="bagfile" default="$(find segmentation_projection)/data/2019-01-08-00-59-59.bag" />
-    <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/graph_optimized_mobilenet_nclt_400p.pb" />	
+    <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/graph_frozen_nclt_400p.pb" />	
     
     <!-- BAGFILE -->
-    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) -l" />
+    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) " />
 
     <!-- RVIZ -->
     <?ignore

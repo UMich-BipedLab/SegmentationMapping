@@ -1,6 +1,6 @@
-import sys,os
+import sys,os, pdb
 import numpy as np
-#import tensorflow as tf
+import tensorflow as tf
 import cv2
 
 import rospy
@@ -8,7 +8,6 @@ import rospy
 
 class LidarSeg:
     def __init__(self, neural_net_graph_path):
-
         # read the network
         with tf.gfile.GFile(neural_net_graph_path, 'rb') as f:
             graph_def = tf.GraphDef()
@@ -16,16 +15,17 @@ class LidarSeg:
         
         # tf configs
         config = tf.ConfigProto()
-        self.G = tf.Graph()
         config.gpu_options.allow_growth = True
-        self.sess = tf.Session(graph=G, config=config)
+        self.sess = tf.Session(config=config)
 
         # the input and output of the neural net
         self.y, = tf.import_graph_def(graph_def, return_elements=['network/output/ArgMax:0'])
-        self.x = G.get_tensor_by_name('import/network/input/Placeholder:0')
+        self.G = tf.get_default_graph()
+        self.x = self.G.get_tensor_by_name('import/network/input/Placeholder:0')
+        self.is_train = self.G.get_tensor_by_name('import/network/input/Placeholder_2:0')
 
         # initialization
-        tf.global_variables_initializer().run()
+        tf.global_variables_initializer().run(session=self.sess)
 
         self.instrinsic = []
         self.cam2lidar  = []
@@ -46,7 +46,7 @@ class LidarSeg:
 
         lidar points: 3xN
         """
-        out = self.sess.run(self.y, feed_dict={self.x: rgb_img})
+        out = self.sess.run(self.y, feed_dict={self.x: rgb_img, self.is_train: False})
         T_c2l = self.cam2lidar[camera_ind]
         lidar_in_cam = np.matmul(T_c2l, lidar)
         projected_lidar_2d = np.matmul(self.intrinsic[camera_ind][:, :-1], lidar_in_cam)
@@ -70,8 +70,9 @@ class LidarSeg:
             cv2.putText(to_show, str(labels[i]), 
                         (projected_points[1, i], projected_points[0,i]),
                         cv2.FONT_HERSHEY_SIMPLEX, 2, 255)
-        cv2.imshow("projected",to_show)
-        cv2.waitKey(0)
+        cv2.imwrite("projected", to_show)
+        #cv2.imshow("projected",to_show)
+        # cv2.waitKey(0)
 
         
 

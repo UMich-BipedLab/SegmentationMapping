@@ -2,7 +2,7 @@
 # ros
 import rospy
 import message_filters
-from sensor_msgs.msg import Image, PointCloud
+from sensor_msgs.msg import Image, PointCloud, PointCloud2
 from cv_bridge import CvBridge, CvBridgeError
 
 # our projection library
@@ -30,7 +30,7 @@ class SegmentationProjectionNode:
         lidar_sub   = message_filters.Subscriber(lidar_topic, PointCloud2)
 
         # multiple camera subscription
-        camera_num  = rospy.get_param('camera_num')
+        camera_num  = rospy.get_param('~camera_num')
         image_topic_list = []
         sub_list   = [lidar_sub]
         # cv_bridge
@@ -38,9 +38,9 @@ class SegmentationProjectionNode:
 
 
         for i in range(camera_num):
-            image_topic_list.append( rospy.get_param('image_'+str(i)) )
-            cam2lidar_file = rospy.get_param('cam2lidar_file_'+str(i))
-            intrinsic_file = rospy.get_param('cam_instrinsic_'+str(i))
+            image_topic_list.append( rospy.get_param('~image_'+str(i)) )
+            cam2lidar_file = rospy.get_param('~cam2lidar_file_'+str(i))
+            intrinsic_file = rospy.get_param('~cam_instrinsic_'+str(i))
             T_cam2lidar    = np.load(cam2lidar_file)
             intrinsic_mat  = np.load(intrinsic_file)
             lidar_seg.add_cam(intrinsic_mat, T_cam2lidar)
@@ -84,14 +84,15 @@ class SegmentationProjectionNode:
         for i in range(len(img_msg_list)):
             cv_image = bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="passthrough")
             cv_image = cv2.copyMakeBorder(cv_image,0,0,0,160,cv2.BORDER_CONSTANT,value=cv2.BLACK)
-            cv_image = cv_image[:400, :]
-            cv2.imshow("original",to_show)
-            cv2.waitKey(0)
-            labeled_points = self.lidar_seg.project_lidar_to_seg(lidar, cv_image, i)
+            cv_image = cv_image[:400, :, :]
+            cv2.imwrite("400p.png", cv_image)
+            #cv2.imshow("original",to_show)
+            #cv2.waitKey(0)
+            #labeled_points = self.lidar_seg.project_lidar_to_seg(lidar, cv_image, i)
 
 
         
-        publish_pointcloud(lidar_msg, labeled_points)
+        #publish_pointcloud(lidar_msg, labeled_points)
 
 
 
