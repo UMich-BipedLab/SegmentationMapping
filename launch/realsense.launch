@@ -7,7 +7,7 @@
     <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/graph_frozen_nclt_400p.pb" />	
     
     <!-- BAGFILE -->
-    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) " />
+    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) -q -l" />
 
     <!-- RVIZ -->
     <?ignore
@@ -22,7 +22,7 @@
     <param name="lidar"                type="string" value="/velodyne_points" />	
     <param name="camera_num"           type="int"    value='1' />
     <param name="image_0"              type="string" value="/camera1/color/image_raw" />
-    <param name="cam_intrinsic_0  "    type="string" value="$(find segmentation_projection)/config/realsense_instrinsic.npy"/>	
+    <param name="cam_intrinsic_0"    type="string" value="$(find segmentation_projection)/config/realsense_instrinsic.npy"/>	
     <param name="cam2lidar_file_0"     type="string" value="$(find segmentation_projection)/config/realsense2lidar.npy"/>
     
   </node>

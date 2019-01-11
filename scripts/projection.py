@@ -27,17 +27,21 @@ class LidarSeg:
         # initialization
         tf.global_variables_initializer().run(session=self.sess)
 
-        self.instrinsic = []
+        self.intrinsic = []
         self.cam2lidar  = []
 
 
-    def add_cam(self,instrinsic_mat, cam2lidar):
+    def add_cam(self,intrinsic_mat, cam2lidar):
         """
         param: intrinsic_mat: 3x4 
                extrinsic_mat: 4x4, imu2cam
         """
         self.intrinsic.append(intrinsic_mat)
         self.cam2lidar.append( cam2lidar )
+        print("add camera: intrinsic ")
+        print(intrinsic_mat)
+        print("add camera: extrinsic ")
+        print(cam2lidar)
 
     def project_lidar_to_seg(self, lidar, rgb_img, camera_ind):
         """
@@ -46,31 +50,43 @@ class LidarSeg:
 
         lidar points: 3xN
         """
-        out = self.sess.run(self.y, feed_dict={self.x: rgb_img, self.is_train: False})
+        out = self.sess.run(self.y,
+                            feed_dict={self.x: np.expand_dims(rgb_img,axis=0),
+                                       self.is_train: False})[0, :, :]
+
         T_c2l = self.cam2lidar[camera_ind]
         lidar_in_cam = np.matmul(T_c2l, lidar)
-        projected_lidar_2d = np.matmul(self.intrinsic[camera_ind][:, :-1], lidar_in_cam)
-        projected_lidar_2d[:, 0] = projected_lidar_2d[:, 0] / projected_lidar_2d[:,2]
-        projected_lidar_2d[:, 1] = projected_lidar_2d[:, 1] / projected_lidar_2d[:,2]
-        projected_lidar_2d[:, 2] = 1
-        labels = np.zeros((1, lidar.shape[1] ))
+        projected_lidar_2d = np.matmul(self.intrinsic[camera_ind], lidar_in_cam)
+        projected_lidar_2d[0, :] = projected_lidar_2d[0, :] / projected_lidar_2d[2, :]
+        projected_lidar_2d[1, :] = projected_lidar_2d[1, :] / projected_lidar_2d[2, :]
+        projected_lidar_2d[2, :] = 1
+
+        projected_points = []
+        projected_index  = []
+        labels = []
 
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
-            print("coordinate "+str((u,v,d)))
-            labels[col] = out[u, v]
+            if u < 0 or u > rgb_img.shape[0] or v < 0 or v > rgb_img.shape[1]:
+                continue
+            print("coordinate "+str((u,v,d)) )
+            projected_points.append(lidar[:, col])
+            labels.append(out[int(u), int(v)])
+            projected_index.append(col)
 
-        self.visualization(labels, projected_lidar_2d, rgb_img)
-        return labels
+        self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
+        return labels, projected_points
         
 
-    def visualization(self, labels, projected_points, rgb_img):
+    def visualization(self, labels,index,  projected_points_2d, rgb_img):
         to_show = rgb_img
-        for i in range(labels.shape[1] ):
-            cv2.putText(to_show, str(labels[i]), 
-                        (projected_points[1, i], projected_points[0,i]),
-                        cv2.FONT_HERSHEY_SIMPLEX, 2, 255)
-        cv2.imwrite("projected", to_show)
+        print("num of projected lidar points is "+str(len(labels)))
+        for i in range(len(labels )):
+            p =     (projected_points_2d[1, index[i]], projected_points_2d[0,index[i]])
+            cv2.putText(to_show, str(int(labels[i])), 
+                        p,
+                        cv2.FONT_HERSHEY_SIMPLEX)
+        cv2.imwrite("projected.png", to_show)
         #cv2.imshow("projected",to_show)
         # cv2.waitKey(0)
 

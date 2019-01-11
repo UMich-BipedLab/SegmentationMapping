@@ -1,13 +1,22 @@
 #!/usr/bin/python
 # ros
 import rospy
+import ros_numpy
 import message_filters
-from sensor_msgs.msg import Image, PointCloud, PointCloud2
+from sensor_msgs.msg import Image, PointCloud, PointCloud2, ChannelFloat32
+from geometry_msgs.msg import Point32  
 from cv_bridge import CvBridge, CvBridgeError
 
 # our projection library
 from projection import LidarSeg
+# map label to color
+from label2color import label_to_color
 
+import cv2
+import numpy as np
+
+# debug
+import pdb
 
 class SegmentationProjectionNode:
     def __init__(self):
@@ -23,7 +32,7 @@ class SegmentationProjectionNode:
 
         # labeled pointcloud publisher
         label_pc_topic = rospy.get_param('~labeled_pointcloud')
-        self.labeled_pointcloud_publisher = rospy.Publisher(label_pc_topic , PointCloud)
+        self.labeled_pointcloud_publisher = rospy.Publisher(label_pc_topic , PointCloud, queue_size=20)
 
         # lidar subscription
         lidar_topic = rospy.get_param('~lidar')
@@ -40,63 +49,93 @@ class SegmentationProjectionNode:
         for i in range(camera_num):
             image_topic_list.append( rospy.get_param('~image_'+str(i)) )
             cam2lidar_file = rospy.get_param('~cam2lidar_file_'+str(i))
-            intrinsic_file = rospy.get_param('~cam_instrinsic_'+str(i))
+            intrinsic_file = rospy.get_param('~cam_intrinsic_'+str(i))
             T_cam2lidar    = np.load(cam2lidar_file)
             intrinsic_mat  = np.load(intrinsic_file)
-            lidar_seg.add_cam(intrinsic_mat, T_cam2lidar)
+            self.lidar_seg.add_cam(intrinsic_mat, T_cam2lidar)
             sub_list.append(message_filters.Subscriber(image_topic_list[i], Image))
         
         # construct message filter
-        ts = message_filters.TimeSynchronizer(sub_list, 50)
+        print("construct ms filter "+str(len(sub_list)))
+        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 50, 0.1)
         ts.registerCallback(self.callback)
  
 
-    def lidar_msg_to_pointcloud(self, original_pc):
-        lidar = np.zeros((3, len(original_pc.points)))
-        ind = 0
-        for p in original_pc.points:
-            lidar[0, ind] = p.x
-            lidar[1, ind] = p.y
-            liadr[2, ind] = p.z
-            ind += 1
+    def pc2_msg_to_lidar(self, original_pc):
+        points = ros_numpy.numpify(original_pc)
+        num_points = points.shape[0]
+        lidar = np.ones((4, num_points))
+        for ind in range(num_points):
+            p = points[ind]
+            lidar[0, ind] = p[0]
+            lidar[1, ind] = p[1]
+            lidar[2, ind] = p[2]
         return lidar
         
 
-    def publish_pointcloud(self, original_pc, labels):
+    def publish_pointcloud(self, header, lidar, labels):
         #declaring pointcloud
         to_publish = PointCloud()
-        #filling pointcloud header
-        to_publish = original_pc
-        to_publish.channels.name   = "labels"
-        to_publish.channels.values = labels.tolist()
+        to_publish.header = header
+        
+        # filling labels
+        label_channel = ChannelFloat32()
+        label_channel.name   = "labels"
+        label_channel.values = labels
+        r_channel = ChannelFloat32()
+        r_channel.name = "r"
+        r_channel.values = []
+        g_channel = ChannelFloat32()
+        g_channel.name = "g"
+        g_channel.values = []
+        b_channel = ChannelFloat32()
+        b_channel.name = "b"
+        b_channel.values = []
+        for i in range(len(labels)):
+            if labels[i] in label_to_color:
+                color = label_to_color(labels[i])
+            else:
+                color = label_to_color[label2color.background] # background
+                
+            r_channel.values.append(color[0])
+            g_channel.values.append(color[1])
+            b_channel.values.append(color[2])
+        to_publish.channels = [label_channel, r_channel, g_channel, b_channel]
+        
+        #filling points
+        to_publish.points = []
+        for i in range(len(lidar)):
+            p = ros_numpy.msgify(Point32, lidar[ i])
+            to_publish.points.append(p)
+            
         #publish
         print ("publishing pointcloud with labels")
         self.labeled_pointcloud_publisher.publish(to_publish)
 
 
 
-    def callback(self, sub_list):
+    def callback(self,* sub_list):
+        img_msg_list = sub_list[1:]
+        lidar_msg    = sub_list[0]
+        lidar = self.pc2_msg_to_lidar(lidar_msg)
         
-        img_msg_list = sub_list[:-1]
-        lidar_msg    = sub_list[-1]
-        lidar = lidar_msg_to_pointcloud(lidar_msg)
-                
         for i in range(len(img_msg_list)):
-            cv_image = bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="passthrough")
-            cv_image = cv2.copyMakeBorder(cv_image,0,0,0,160,cv2.BORDER_CONSTANT,value=cv2.BLACK)
+            cv_image = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="passthrough")
+            cv_image = cv2.copyMakeBorder(cv_image,0,0,0,160,cv2.BORDER_CONSTANT,value=(0,0,0))
             cv_image = cv_image[:400, :, :]
-            cv2.imwrite("400p.png", cv_image)
+            cv2.imwrite("original.png", cv_image)
             #cv2.imshow("original",to_show)
             #cv2.waitKey(0)
-            #labeled_points = self.lidar_seg.project_lidar_to_seg(lidar, cv_image, i)
+            labeled_points, projected_lidar = self.lidar_seg.project_lidar_to_seg(lidar, cv_image, i)
 
 
         
-        #publish_pointcloud(lidar_msg, labeled_points)
+        self.publish_pointcloud(lidar_msg.header, projected_lidar, labeled_points)
 
 
 
     def main(self):
+        print("spin...")
         rospy.spin()
     
 
