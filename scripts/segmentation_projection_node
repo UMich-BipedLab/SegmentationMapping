@@ -10,7 +10,7 @@ from cv_bridge import CvBridge, CvBridgeError
 # our projection library
 from projection import LidarSeg
 # map label to color
-from label2color import label_to_color
+from label2color import label_to_color, background
 
 import cv2
 import numpy as np
@@ -45,7 +45,6 @@ class SegmentationProjectionNode:
         # cv_bridge
         self.bridge = CvBridge()
 
-
         for i in range(camera_num):
             image_topic_list.append( rospy.get_param('~image_'+str(i)) )
             cam2lidar_file = rospy.get_param('~cam2lidar_file_'+str(i))
@@ -64,7 +63,7 @@ class SegmentationProjectionNode:
     def pc2_msg_to_lidar(self, original_pc):
         points = ros_numpy.numpify(original_pc)
         num_points = points.shape[0]
-        lidar = np.ones((4, num_points))
+        lidar = np.ones((4, num_points), dtype=np.float32)
         for ind in range(num_points):
             p = points[ind]
             lidar[0, ind] = p[0]
@@ -93,10 +92,9 @@ class SegmentationProjectionNode:
         b_channel.values = []
         for i in range(len(labels)):
             if labels[i] in label_to_color:
-                color = label_to_color(labels[i])
+                color = label_to_color[labels[i]]
             else:
-                color = label_to_color[label2color.background] # background
-                
+                color = label_to_color[background] # background
             r_channel.values.append(color[0])
             g_channel.values.append(color[1])
             b_channel.values.append(color[2])
@@ -105,7 +103,10 @@ class SegmentationProjectionNode:
         #filling points
         to_publish.points = []
         for i in range(len(lidar)):
-            p = ros_numpy.msgify(Point32, lidar[ i])
+            p = Point32()
+            p.x = lidar[i][0]
+            p.y = lidar[i][1]
+            p.z = lidar[i][2]
             to_publish.points.append(p)
             
         #publish
@@ -120,7 +121,7 @@ class SegmentationProjectionNode:
         lidar = self.pc2_msg_to_lidar(lidar_msg)
         
         for i in range(len(img_msg_list)):
-            cv_image = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="passthrough")
+            cv_image = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="bgr8")
             cv_image = cv2.copyMakeBorder(cv_image,0,0,0,160,cv2.BORDER_CONSTANT,value=(0,0,0))
             cv_image = cv_image[:400, :, :]
             cv2.imwrite("original.png", cv_image)

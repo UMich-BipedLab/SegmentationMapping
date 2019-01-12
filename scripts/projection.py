@@ -37,7 +37,7 @@ class LidarSeg:
                extrinsic_mat: 4x4, imu2cam
         """
         self.intrinsic.append(intrinsic_mat)
-        self.cam2lidar.append( cam2lidar )
+        self.cam2lidar.append( np.linalg.inv(cam2lidar ))
         print("add camera: intrinsic ")
         print(intrinsic_mat)
         print("add camera: extrinsic ")
@@ -55,8 +55,8 @@ class LidarSeg:
                                        self.is_train: False})[0, :, :]
 
         T_c2l = self.cam2lidar[camera_ind]
-        lidar_in_cam = np.matmul(T_c2l, lidar)
-        projected_lidar_2d = np.matmul(self.intrinsic[camera_ind], lidar_in_cam)
+        lidar_in_cam = np.matmul(self.intrinsic[camera_ind], T_c2l )
+        projected_lidar_2d = np.matmul( lidar_in_cam, lidar)
         projected_lidar_2d[0, :] = projected_lidar_2d[0, :] / projected_lidar_2d[2, :]
         projected_lidar_2d[1, :] = projected_lidar_2d[1, :] / projected_lidar_2d[2, :]
         projected_lidar_2d[2, :] = 1
@@ -67,11 +67,11 @@ class LidarSeg:
 
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
-            if u < 0 or u > rgb_img.shape[0] or v < 0 or v > rgb_img.shape[1]:
+            if u < 0 or u > rgb_img.shape[1] or v < 0 or v > rgb_img.shape[0]:
                 continue
-            print("coordinate "+str((u,v,d)) )
+            #print("coordinate "+str((u,v,d)) )
             projected_points.append(lidar[:, col])
-            labels.append(out[int(u), int(v)])
+            labels.append(out[int(v), int(u)])
             projected_index.append(col)
 
         self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
@@ -82,10 +82,12 @@ class LidarSeg:
         to_show = rgb_img
         print("num of projected lidar points is "+str(len(labels)))
         for i in range(len(labels )):
-            p =     (projected_points_2d[1, index[i]], projected_points_2d[0,index[i]])
-            cv2.putText(to_show, str(int(labels[i])), 
-                        p,
-                        cv2.FONT_HERSHEY_SIMPLEX)
+            p = (int(projected_points_2d[0, index[i]]),
+                 int(projected_points_2d[1, index[i]]))
+            #cv2.putText(to_show, str(int(labels[i])), 
+            #            p,
+            #            cv2.FONT_HERSHEY_SIMPLEX, 5, (0,0,203))
+            cv2.circle(to_show,p,2, (0,0,203))
         cv2.imwrite("projected.png", to_show)
         #cv2.imshow("projected",to_show)
         # cv2.waitKey(0)
