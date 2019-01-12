@@ -7,7 +7,7 @@ Project lidar points into camera frame, and then label them according to the pix
 # launch
 `roslaunch segmentation_projection realsense.launch`
 
-# parameters
+# parameters in the launch file
 * `neural_net_graph`: The path of the neural network graph.pb file
 * `is_output_distribution`: whether we need the distribution of all classes, or just the final label (the class with the max probability)
 * `neural_net_input_width`: the width of the neural network input
