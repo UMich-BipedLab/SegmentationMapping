@@ -34,26 +34,34 @@ class LidarSeg:
     def add_cam(self,intrinsic_mat, cam2lidar):
         """
         param: intrinsic_mat: 3x4 
-               extrinsic_mat: 4x4, imu2cam
+               extrinsic_mat: 4x4, 
         """
         self.intrinsic.append(intrinsic_mat)
-        self.cam2lidar.append( np.linalg.inv(cam2lidar ))
+        self.cam2lidar.append( cam2lidar )
         print("add camera: intrinsic ")
         print(intrinsic_mat)
         print("add camera: extrinsic ")
-        print(cam2lidar)
+        print(self.cam2lidar[-1])
 
-    def project_lidar_to_seg(self, lidar, rgb_img, camera_ind):
+    def project_lidar_to_seg(self, lidar, rgb_img, camera_ind, camera_shape, is_output_distribution):
         """
         assume the lidar points can all be projected to this img
         assume the rgb img shape meets the requirement of the neural net
 
         lidar points: 3xN
         """
-        out = self.sess.run(self.y,
-                            feed_dict={self.x: np.expand_dims(rgb_img,axis=0),
-                                       self.is_train: False})[0, :, :]
+        if is_output_distribution:
+            out, dist = self.sess.run([self.y, self.dist],
+                                      feed_dict={self.x: np.expand_dims(rgb_img,axis=0),
+                                                 self.is_train: False})
+        else:
+            out = self.sess.run(self.y,
+                                feed_dict={self.x: np.expand_dims(rgb_img,axis=0),
+                                           self.is_train: False})
+            dist = []
+        out = out [0,:,:]
 
+        # project lidar points into camera coordinates
         T_c2l = self.cam2lidar[camera_ind]
         lidar_in_cam = np.matmul(self.intrinsic[camera_ind], T_c2l )
         projected_lidar_2d = np.matmul( lidar_in_cam, lidar)
@@ -64,10 +72,10 @@ class LidarSeg:
         projected_points = []
         projected_index  = []
         labels = []
-
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
-            if u < 0 or u > rgb_img.shape[1] or v < 0 or v > rgb_img.shape[0]:
+            if u < 0 or u > camera_shape[1] or \
+               v < 0 or v > camera_shape[0]:
                 continue
             #print("coordinate "+str((u,v,d)) )
             projected_points.append(lidar[:, col])
@@ -75,7 +83,7 @@ class LidarSeg:
             projected_index.append(col)
 
         self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
-        return labels, projected_points
+        return labels, projected_points, dist
         
 
     def visualization(self, labels,index,  projected_points_2d, rgb_img):
@@ -87,6 +95,7 @@ class LidarSeg:
             #cv2.putText(to_show, str(int(labels[i])), 
             #            p,
             #            cv2.FONT_HERSHEY_SIMPLEX, 5, (0,0,203))
+            if p[0] > rgb_img.shape[1] or p[1] > rgb_img.shape[0]: continue
             cv2.circle(to_show,p,2, (0,0,203))
         cv2.imwrite("projected.png", to_show)
         #cv2.imshow("projected",to_show)

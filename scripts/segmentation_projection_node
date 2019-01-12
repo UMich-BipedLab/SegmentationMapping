@@ -44,7 +44,10 @@ class SegmentationProjectionNode:
         sub_list   = [lidar_sub]
         # cv_bridge
         self.bridge = CvBridge()
-
+        self.net_input_height = rospy.get_param("~neural_net_input_height")
+        self.net_input_width  = rospy.get_param("~neural_net_input_width")
+        self.is_output_dist = rospy.get_param("~is_output_distribution")
+        
         for i in range(camera_num):
             image_topic_list.append( rospy.get_param('~image_'+str(i)) )
             cam2lidar_file = rospy.get_param('~cam2lidar_file_'+str(i))
@@ -56,7 +59,7 @@ class SegmentationProjectionNode:
         
         # construct message filter
         print("construct ms filter "+str(len(sub_list)))
-        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 50, 0.1)
+        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 50, 0.05)
         ts.registerCallback(self.callback)
  
 
@@ -72,10 +75,10 @@ class SegmentationProjectionNode:
         return lidar
         
 
-    def publish_pointcloud(self, header, lidar, labels):
+    def publish_pointcloud(self, lidar_header, lidar, labels, lidar_class_dist):
         #declaring pointcloud
         to_publish = PointCloud()
-        to_publish.header = header
+        to_publish.header = lidar_header
         
         # filling labels
         label_channel = ChannelFloat32()
@@ -119,19 +122,33 @@ class SegmentationProjectionNode:
         img_msg_list = sub_list[1:]
         lidar_msg    = sub_list[0]
         lidar = self.pc2_msg_to_lidar(lidar_msg)
-        
+
+        # result container for successfully projected points
+        # and corresponding labels
+        projected_lidar = []
+        labeled_points  = []
+        lidar_distribution = []
         for i in range(len(img_msg_list)):
             cv_image = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="bgr8")
-            cv_image = cv2.copyMakeBorder(cv_image,0,0,0,160,cv2.BORDER_CONSTANT,value=(0,0,0))
-            cv_image = cv_image[:400, :, :]
-            cv2.imwrite("original.png", cv_image)
+            if self.net_input_width > cv_image.shape[1] or \
+               self.net_input_height > cv_image.shape[0]:
+                cv_image = cv2.copyMakeBorder(cv_image,0,0,
+                                              max(0, self.net_input_height - cv_image.shape[0]),
+                                              max(0, self.net_input_width-cv_image.shape[1]),
+                                              cv2.BORDER_CONSTANT,value=(0,0,0))
+            cv_image = cv_image[:self.net_input_height, :self.net_input_width, :]
+            #cv2.imwrite("original.png", cv_image)
             #cv2.imshow("original",to_show)
             #cv2.waitKey(0)
-            labeled_points, projected_lidar = self.lidar_seg.project_lidar_to_seg(lidar, cv_image, i)
-
-
-        
-        self.publish_pointcloud(lidar_msg.header, projected_lidar, labeled_points)
+            
+            labeled_points_i, projected_lidar_i, dist_i = self.lidar_seg.project_lidar_to_seg(lidar, cv_image, i,\
+                                                                                              cv_image.shape,\
+                                                                                              self.is_output_dist)
+            labeled_points  = labeled_points  + labeled_points_i
+            projected_lidar = projected_lidar + projected_lidar_i
+            lidar_distribution = lidar_distribution + dist_i
+            
+        self.publish_pointcloud(lidar_msg.header, projected_lidar, labeled_points, lidar_distribution)
 
 
 

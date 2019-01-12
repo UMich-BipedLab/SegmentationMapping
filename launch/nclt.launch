@@ -21,13 +21,13 @@
       <param name="labeled_pointcloud"   type="string" value="labeled_pointcloud" />
     
       <param name="neural_net_graph"     type="string" value="$(arg neural_net_graph_path)"/>
-      <param name="is_output_distribution" type="int" value="0" />
+      <param name="is_output_distribution" type="int"  value="1" />
       <param name="neural_net_input_width" type="int"  value="800" />
       <param name="neural_net_input_height" type="int" value="400" />
     
       <param name="lidar"                type="string" value="/velodyne_points" />
     
-      <param name="camera_num"           type="int"    value='1' />
+      <param name="camera_num"           type="int"    value='6' />
       <param name="image_0"              type="string" value="/camera1/color/image_raw" />
       <param name="cam_intrinsic_0"    type="string" value="$(find segmentation_projection)/config/realsense_intrinsic.npy"/>	
       <param name="cam2lidar_file_0"     type="string" value="$(find segmentation_projection)/config/realsense2lidar.npy"/>
