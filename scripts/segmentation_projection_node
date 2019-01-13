@@ -59,7 +59,7 @@ class SegmentationProjectionNode:
         
         # construct message filter
         print("construct ms filter "+str(len(sub_list)))
-        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 50, 0.05)
+        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 30, 0.03)
         ts.registerCallback(self.callback)
  
 
@@ -123,6 +123,7 @@ class SegmentationProjectionNode:
         lidar_msg    = sub_list[0]
         lidar = self.pc2_msg_to_lidar(lidar_msg)
 
+        print("callback at time "+str(lidar_msg.header.stamp.to_sec()))
         # result container for successfully projected points
         # and corresponding labels
         projected_lidar = []

@@ -5,6 +5,7 @@ import cv2
 
 import rospy
 
+from label2color import  background, label_to_color
 
 class LidarSeg:
     def __init__(self, neural_net_graph_path):
@@ -29,7 +30,7 @@ class LidarSeg:
 
         self.intrinsic = []
         self.cam2lidar  = []
-
+        self.counter = 0
 
     def add_cam(self,intrinsic_mat, cam2lidar):
         """
@@ -75,14 +76,14 @@ class LidarSeg:
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
             if u < 0 or u > camera_shape[1] or \
-               v < 0 or v > camera_shape[0]:
+               v < 0 or v > camera_shape[0] :
                 continue
             #print("coordinate "+str((u,v,d)) )
             projected_points.append(lidar[:, col])
             labels.append(out[int(v), int(u)])
             projected_index.append(col)
 
-        self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
+        #self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
         return labels, projected_points, dist
         
 
@@ -96,8 +97,14 @@ class LidarSeg:
             #            p,
             #            cv2.FONT_HERSHEY_SIMPLEX, 5, (0,0,203))
             if p[0] > rgb_img.shape[1] or p[1] > rgb_img.shape[0]: continue
-            cv2.circle(to_show,p,2, (0,0,203))
-        cv2.imwrite("projected.png", to_show)
+            if labels[i] in label_to_color:
+                color = label_to_color[labels[i]]
+            else:
+                color = label_to_color[background]
+
+            cv2.circle(to_show,p,2, color)
+        cv2.imwrite("projected"+str(self.counter)+".png", to_show)
+        self.counter +=1
         #cv2.imshow("projected",to_show)
         # cv2.waitKey(0)
 
