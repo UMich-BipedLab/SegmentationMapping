@@ -19,7 +19,7 @@ Project lidar points into camera frame, and then label them according to the pix
 * `cam_intrinsic_0`: the `npy` file containing the intrinsic transformation of 0-th camera. Use `image_[0-9]` to indexing camera topics
 *  `cam2lidar_file_0`: the `npy` file containing camera to lidar transformation of 0-th camera. Use `image_[0-9]` to indexing camera topics
 
-# Generate cam2lidar file given measured transformation
+# Generate cam2lidar npy given measured transformation
 `cd config/; python generate_cam2lidar.py`. Note that you have to hand-type in the `[x,y,z, roll, pitch, yawn]` in `generate_cam2lidar.py`
 
 
