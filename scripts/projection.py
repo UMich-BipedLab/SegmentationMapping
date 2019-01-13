@@ -75,14 +75,14 @@ class LidarSeg:
         labels = []
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
-            if u < 0 or u > camera_shape[1] or \
-               v < 0 or v > camera_shape[0] :
+            if u < 0 or u > camera_shape[1] or u>rgb_img.shape[1] or \
+               v < 0 or v > camera_shape[0] or v >rgb_img.shape[0] :
                 continue
             #print("coordinate "+str((u,v,d)) )
             projected_points.append(lidar[:, col])
             labels.append(out[int(v), int(u)])
             projected_index.append(col)
-
+            
         #self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
         return labels, projected_points, dist
         
