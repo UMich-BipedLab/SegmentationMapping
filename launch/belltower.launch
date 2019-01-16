@@ -7,7 +7,7 @@
     <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/graph_frozen_nclt_400p.pb" />	
     
     <!-- BAGFILE -->
-    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) -q -l" />
+    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) -q -l -r 0.2" />
 
     <!-- RVIZ -->
     <?ignore
