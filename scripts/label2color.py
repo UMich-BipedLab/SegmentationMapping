@@ -2,7 +2,7 @@
 
 background = 255
 label_to_color = {                                                                                                              
-    2: (112, 81, 81), # road
+    2: (128, 64,128), # road
     3: (128, 64,128), # sidewalk
     5: ( 255, 0, 255), # building
     10: (255,255,255), # pole
