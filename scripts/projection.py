@@ -44,6 +44,20 @@ class LidarSeg:
         print("add camera: extrinsic ")
         print(self.cam2lidar[-1])
 
+
+    def get_cropped_uv(self, u, v):
+        v = v- 500
+        u = int(u * 2.0 / 3.0)
+        v = int(v * 2.0 / 3.0)
+        return u,v
+        
+    def is_out_of_bound(self, u, v):
+        if u < 0 or u > 1200 or \
+           v < 500 or v > 1100 :
+            return True
+        
+
+
     def project_lidar_to_seg(self, lidar, rgb_img, camera_ind, camera_shape, is_output_distribution):
         """
         assume the lidar points can all be projected to this img
@@ -76,16 +90,17 @@ class LidarSeg:
 	original_rgb = []
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
-            if u < 0 or u > camera_shape[1] or u>rgb_img.shape[1] or \
-               v < 0 or v > camera_shape[0] or v >rgb_img.shape[0] :
+            
+            if self.is_out_of_bound(u, v):
                 continue
             #print("coordinate "+str((u,v,d)) )
+            u ,v = self.get_cropped_uv(u, v)
             projected_points.append(lidar[:, col])
             labels.append(out[int(v), int(u)])
 	    original_rgb.append(rgb_img[int(v), int(u)])
             projected_index.append(col)
             
-        #self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
+        self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
         return labels, projected_points, dist, original_rgb
         
 
@@ -93,18 +108,19 @@ class LidarSeg:
         to_show = rgb_img
         print("num of projected lidar points is "+str(len(labels)))
         for i in range(len(labels )):
-            p = (int(projected_points_2d[0, index[i]]),
-                 int(projected_points_2d[1, index[i]]))
+            p = (projected_points_2d[0, index[i]],
+                 projected_points_2d[1, index[i]])
             #cv2.putText(to_show, str(int(labels[i])), 
             #            p,
             #            cv2.FONT_HERSHEY_SIMPLEX, 5, (0,0,203))
-            if p[0] > rgb_img.shape[1] or p[1] > rgb_img.shape[0]: continue
+            if self.is_out_of_bound(p[0], p[1]): continue
+            
             if labels[i] in label_to_color:
                 color = label_to_color[labels[i]]
             else:
                 color = label_to_color[background]
 
-            cv2.circle(to_show,p,2, color)
+            cv2.circle(to_show,self.get_cropped_uv(p),2, color)
         cv2.imwrite("projected"+str(self.counter)+".png", to_show)
         self.counter +=1
         #cv2.imshow("projected",to_show)

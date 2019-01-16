@@ -134,15 +134,17 @@ class SegmentationProjectionNode:
         lidar_distribution = []
         original_rgb = []
 	for i in range(len(img_msg_list)):
-            cv_image = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="bgr8")
-            camera_shape = cv_image.shape
-            if self.net_input_width > cv_image.shape[1] or \
-               self.net_input_height > cv_image.shape[0]:
-                cv_image = cv2.copyMakeBorder(cv_image,0,0,
-                                              max(0, self.net_input_height - cv_image.shape[0]),
-                                              max(0, self.net_input_width-cv_image.shape[1]),
+            original_image = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="bgr8")
+            camera_shape = original_image.shape
+            if self.net_input_width > original_image.shape[1] or \
+               self.net_input_height > original_image.shape[0]:
+                original_image = cv2.copyMakeBorder(original_image,0,0,
+                                              max(0, self.net_input_height - original_image.shape[0]),
+                                              max(0, self.net_input_width-original_image.shape[1]),
                                               cv2.BORDER_CONSTANT,value=(0,0,0))
-            cv_image = cv_image[:self.net_input_height, :self.net_input_width, :]
+            cv_image = original_image[500:1100, 0:1200]
+            cv_image = cv2.imresize(cv_image, dsize=(800, 400), interpolation=cv2.INTER_CUBIC)
+            #cv_image = original_image[:self.net_input_height, :self.net_input_width, :]
             #cv2.imwrite("original.png", cv_image)
             #cv2.imshow("original",to_show)
             #cv2.waitKey(0)
