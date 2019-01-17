@@ -51,6 +51,7 @@ class SegmentationProjectionNode:
         self.is_output_dist = rospy.get_param("~is_output_distribution")
 
         for i in range(camera_num):
+            print("adding camera "+str(i))
             image_topic_list.append( rospy.get_param('~image_'+str(i)) )
             cam2lidar_file = rospy.get_param('~cam2lidar_file_'+str(i))
             intrinsic_file = rospy.get_param('~cam_intrinsic_'+str(i))
@@ -63,7 +64,7 @@ class SegmentationProjectionNode:
         
         # construct message filter
         print("construct ms filter "+str(len(sub_list)))
-        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 30, 0.03)
+        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 30, 0.12)
         ts.registerCallback(self.callback)
  
 
@@ -147,7 +148,7 @@ class SegmentationProjectionNode:
                                               max(0, self.net_input_width-original_image.shape[1]),
                                               cv2.BORDER_CONSTANT,value=(0,0,0))
             cv_image = original_image[500:1100, 0:1200]
-            cv_image = cv2.imresize(cv_image, dsize=(800, 400), interpolation=cv2.INTER_CUBIC)
+            cv_image = cv2.resize(cv_image, dsize=(800, 400), interpolation=cv2.INTER_CUBIC)
             #cv_image = original_image[:self.net_input_height, :self.net_input_width, :]
             #cv2.imwrite("original.png", cv_image)
             #cv2.imshow("original",to_show)

@@ -40,18 +40,23 @@ class DistortMap(object):
                 self.mapv[int(chunks[0]),int(chunks[1])] = float(chunks[2])
 
                 
-    def distort(self, lidar_pojected_2d):
+    def distort(self, lidar_projected_2d):
         '''
         lidar_projected_2d:  3*N np array. The last row contains only 1s
         '''
-        distorted = np.ones(lidar_projected_2d.shape)
-        for col in lidar_projected_2d.shape[1]:
-            u = lidar_projected_2d[0, col]
-            v = lidar_projected_2d[1, col]
-            distorted[0, col] = self.mapu[u, v]
-            distorted[1, col] = self.mapv[u, v]
+        distorted = []#np.ones(lidar_projected_2d.shape)
+        counter = 0
+        for col in range(lidar_projected_2d.shape[1]):
+            u = int(lidar_projected_2d[0, col])
+            v = int(lidar_projected_2d[1, col])
+            if u < 0 or u > 1200 or v< 500 or v > 1100:
+                continue
+            dist = np.ones((1,3))
+            dist[0] = self.mapu[u, v]
+            dist[0,1] = self.mapv[u, v]
+            distort.append(dist)
 
-        return distorted
+        return np.array(distorted).transpose()
 
 
 

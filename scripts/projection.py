@@ -76,7 +76,7 @@ class LidarSeg:
         out = out [0,:,:]
 
         # project lidar points into camera coordinates
-        T_c2l = self.cam2lidar[camera_ind]
+        T_c2l = self.cam2lidar[camera_ind][:3, :]
         lidar_in_cam = np.matmul(self.intrinsic[camera_ind], T_c2l )
         projected_lidar_2d = np.matmul( lidar_in_cam, lidar)
         projected_lidar_2d[0, :] = projected_lidar_2d[0, :] / projected_lidar_2d[2, :]
@@ -92,10 +92,10 @@ class LidarSeg:
 	original_rgb = []
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
-            
+
             if self.is_out_of_bound(u, v):
                 continue
-            #print("coordinate "+str((u,v,d)) )
+            print("coordinate "+str((u,v,d)) )
             u ,v = self.get_cropped_uv(u, v)
             projected_points.append(lidar[:, col])
             labels.append(out[int(v), int(u)])
@@ -122,7 +122,7 @@ class LidarSeg:
             else:
                 color = label_to_color[background]
 
-            cv2.circle(to_show,self.get_cropped_uv(p),2, color)
+            cv2.circle(to_show,self.get_cropped_uv(p[0], p[1]),2, color)
         cv2.imwrite("projected"+str(self.counter)+".png", to_show)
         self.counter +=1
         #cv2.imshow("projected",to_show)

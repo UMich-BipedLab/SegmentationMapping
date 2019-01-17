@@ -2,15 +2,17 @@
 
 <launch>
 
-    <!-- ARGS -->
-    <arg name="bagfile" default="$(find segmentation_projection)/data/2019-01-08-00-59-59.bag" />
-    <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/graph_frozen_nclt_400p.pb" />	
+  <!-- ARGS -->
+  <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/graph_frozen_nclt_400p.pb" />
+    <?ignore
+    <arg name="bagfile" default="/home/nvidia/seagate/bagfiles/2019-01-17/vel1.bag /home/nvidia/seagate/bagfiles/2019-01-17/nclt_60s_04_29_img.bag" />
+
     
     <!-- BAGFILE -->
     <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) -q -l" />
 
     <!-- RVIZ -->
-    <?ignore
+  
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rvizfile)"/>
     ?>
 
@@ -31,17 +33,17 @@
       <param name="image_0"              type="string" value="/camera1/color/image_raw" />
       <param name="cam_intrinsic_0"    type="string" value="$(find segmentation_projection)/config/nclt_cams/nclt_intrinsic_1.npy"/>	
       <param name="cam2lidar_file_0"     type="string" value="$(find segmentation_projection)/config/nclt_cams/cam2lidar_1.npy"/>
-      <param name="cam_distort_0"        type="string" value="$(find segmentation_projection)/config/nclt_cams/D2U_Cam1_1616X1232.txt" />
+      <param name="cam_distortion_0"        type="string" value="$(find segmentation_projection)/config/nclt_cams/D2U_Cam1_1616X1232.txt" />
       
       <param name="image_1"              type="string" value="/camera4/color/image_raw" />
       <param name="cam_intrinsic_1"    type="string" value="$(find segmentation_projection)/config/nclt_cams/nclt_intrinsic_4.npy"/>	
       <param name="cam2lidar_file_1"     type="string" value="$(find segmentation_projection)/config/nclt_cams/cam2lidar_4.npy"/>
-      <param name="cam_distort_1"        type="string" value="$(find segmentation_projection)/config/nclt_cams/D2U_Cam4_1616X1232.txt">
+      <param name="cam_distortion_1"        type="string" value="$(find segmentation_projection)/config/nclt_cams/D2U_Cam4_1616X1232.txt" />
       
       <param name="image_2"              type="string" value="/camera5/color/image_raw" />
       <param name="cam_intrinsic_2"    type="string" value="$(find segmentation_projection)/config/nclt_cams/nclt_intrinsic_5.npy"/>	
       <param name="cam2lidar_file_2"     type="string" value="$(find segmentation_projection)/config/nclt_cams/cam2lidar_5.npy"/>
-      <param name="cam_distort_2"        type="string" value="$(find segmentation_projection)/config/nclt_cams/D2U_Cam5_1616X1232.txt">
+      <param name="cam_distortion_2"        type="string" value="$(find segmentation_projection)/config/nclt_cams/D2U_Cam5_1616X1232.txt" />
     
   </node>
 
