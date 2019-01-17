@@ -1,8 +1,6 @@
 
 import numpy as np
-import cv2
-
-
+import cv2, sys
 
 cam2lidar_path = sys.argv[1]
 
@@ -47,12 +45,12 @@ def Rz( radian):
 #c2l_vec = np.array([0.19,  0.04, 0.2, -0.0124 * np.pi / 180, -89.5533* np.pi/180, 91.2846*np.pi/180])
 # The one we actually used in this projection package: I tuned the numbers based on 
 # my eyes' judgement of projection quality!
-c2l_vec = np.array([0.19,  0.04, 0.2, -1.5 * np.pi / 180, -81* np.pi/180, 93.2846*np.pi/180])
 
 
-rot = np.matmul(np.matmul(Rz(c2l_vec[5]), Ry(c2l_vec[4]) ), Rx(c2l_vec[3]) )
-T_c2l = np.identity(4)
-T_c2l[:3,:3] = rot[:3, :3]
-T_c2l[:3, 3] = np.transpose(c2l_vec[:3])
-np.save(cam2lidar_path, T_c2l)
+l2c_v = np.array([0.041862, -0.001905, -0.000212, 160.868615* np.pi / 180, 89.914152* np.pi / 180, 160.619894* np.pi / 180])
+rot = np.matmul(np.matmul(Rz(l2c_v[5]), Ry(l2c_v[4]) ), Rx(l2c_v[3]) )
+T_l2c = np.identity(4)
+T_l2c[:3,:3] = rot[:3, :3]
+T_l2c[:3, 3] = np.transpose(l2c_v[:3])
+np.save(cam2lidar_path, np.linalg.inv(T_l2c))
 
