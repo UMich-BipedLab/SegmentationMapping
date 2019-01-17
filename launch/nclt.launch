@@ -29,14 +29,19 @@
     
       <param name="camera_num"           type="int"    value='3' />
       <param name="image_0"              type="string" value="/camera1/color/image_raw" />
-      <param name="cam_intrinsic_0"    type="string" value="$(find segmentation_projection)/config/nclt_intrinsic_1.npy"/>	
-      <param name="cam2lidar_file_0"     type="string" value="$(find segmentation_projection)/config/cam2lidar_1.npy"/>
+      <param name="cam_intrinsic_0"    type="string" value="$(find segmentation_projection)/config/nclt_cams/nclt_intrinsic_1.npy"/>	
+      <param name="cam2lidar_file_0"     type="string" value="$(find segmentation_projection)/config/nclt_cams/cam2lidar_1.npy"/>
+      <param name="cam_distort_0"        type="string" value="$(find segmentation_projection)/config/nclt_cams/D2U_Cam1_1616X1232.txt" />
+      
       <param name="image_1"              type="string" value="/camera1/color/image_raw" />
-      <param name="cam_intrinsic_1"    type="string" value="$(find segmentation_projection)/config/nclt_intrinsic_4.npy"/>	
-      <param name="cam2lidar_file_1"     type="string" value="$(find segmentation_projection)/config/cam2lidar_4.npy"/>
+      <param name="cam_intrinsic_1"    type="string" value="$(find segmentation_projection)/config/nclt_cams/nclt_intrinsic_4.npy"/>	
+      <param name="cam2lidar_file_1"     type="string" value="$(find segmentation_projection)/config/nclt_cams/cam2lidar_4.npy"/>
+      <param name="cam_distort_1"        type="string" value="$(find segmentation_projection)/config/nclt_cams/D2U_Cam4_1616X1232.txt">
+      
       <param name="image_2"              type="string" value="/camera1/color/image_raw" />
-      <param name="cam_intrinsic_2"    type="string" value="$(find segmentation_projection)/config/nclt_intrinsic_5.npy"/>	
-      <param name="cam2lidar_file_2"     type="string" value="$(find segmentation_projection)/config/cam2lidar_5.npy"/>
+      <param name="cam_intrinsic_2"    type="string" value="$(find segmentation_projection)/config/nclt_cams/nclt_intrinsic_5.npy"/>	
+      <param name="cam2lidar_file_2"     type="string" value="$(find segmentation_projection)/config/nclt_cams/cam2lidar_5.npy"/>
+      <param name="cam_distort_2"        type="string" value="$(find segmentation_projection)/config/nclt_cams/D2U_Cam5_1616X1232.txt">
     
   </node>
 

@@ -11,6 +11,8 @@ from cv_bridge import CvBridge, CvBridgeError
 from projection import LidarSeg
 # map label to color
 from label2color import label_to_color, background
+# our distortion lib
+from distort import DistortMap
 
 import cv2
 import numpy as np
@@ -47,14 +49,16 @@ class SegmentationProjectionNode:
         self.net_input_height = rospy.get_param("~neural_net_input_height")
         self.net_input_width  = rospy.get_param("~neural_net_input_width")
         self.is_output_dist = rospy.get_param("~is_output_distribution")
-        
+
         for i in range(camera_num):
             image_topic_list.append( rospy.get_param('~image_'+str(i)) )
             cam2lidar_file = rospy.get_param('~cam2lidar_file_'+str(i))
             intrinsic_file = rospy.get_param('~cam_intrinsic_'+str(i))
+            distortion_file= rospy.get_param('~cam_distortion_'+str(i))
             T_cam2lidar    = np.load(cam2lidar_file)
             intrinsic_mat  = np.load(intrinsic_file)
-            self.lidar_seg.add_cam(intrinsic_mat, T_cam2lidar)
+            distort        = DistortMap(distortion_file)
+            self.lidar_seg.add_cam(intrinsic_mat, T_cam2lidar, distort)
             sub_list.append(message_filters.Subscriber(image_topic_list[i], Image))
         
         # construct message filter

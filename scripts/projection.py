@@ -29,21 +29,20 @@ class LidarSeg:
         tf.global_variables_initializer().run(session=self.sess)
 
         self.intrinsic = []
-        self.cam2lidar  = []
+        self.cam2lidar = []
+        self.distort_map = []
         self.counter = 0
 
-    def add_cam(self,intrinsic_mat, cam2lidar):
+    def add_cam(self,intrinsic_mat, cam2lidar, distort):
         """
         param: intrinsic_mat: 3x4 
                extrinsic_mat: 4x4, 
         """
         self.intrinsic.append(intrinsic_mat)
         self.cam2lidar.append( cam2lidar )
-        print("add camera: intrinsic ")
-        print(intrinsic_mat)
-        print("add camera: extrinsic ")
-        print(self.cam2lidar[-1])
+        self.distort_map.append(distort)
 
+        
 
     def get_cropped_uv(self, u, v):
         v = v- 500
@@ -61,7 +60,7 @@ class LidarSeg:
     def project_lidar_to_seg(self, lidar, rgb_img, camera_ind, camera_shape, is_output_distribution):
         """
         assume the lidar points can all be projected to this img
-        assume the rgb img shape meets the requirement of the neural net
+        assume the rgb img shape meets the requirement of the neural net input
 
         lidar points: 3xN
         """
@@ -83,6 +82,9 @@ class LidarSeg:
         projected_lidar_2d[0, :] = projected_lidar_2d[0, :] / projected_lidar_2d[2, :]
         projected_lidar_2d[1, :] = projected_lidar_2d[1, :] / projected_lidar_2d[2, :]
         projected_lidar_2d[2, :] = 1
+
+        # distort the lidar points based on the distortion map file
+        projected_lidar_2d = self.distort_map[camera_ind].distort(projected_lidar_2d)
 
         projected_points = []
         projected_index  = []
@@ -108,8 +110,8 @@ class LidarSeg:
         to_show = rgb_img
         print("num of projected lidar points is "+str(len(labels)))
         for i in range(len(labels )):
-            p = (projected_points_2d[0, index[i]],
-                 projected_points_2d[1, index[i]])
+            p = (int(projected_points_2d[0, index[i]]),
+                 int(projected_points_2d[1, index[i]]))
             #cv2.putText(to_show, str(int(labels[i])), 
             #            p,
             #            cv2.FONT_HERSHEY_SIMPLEX, 5, (0,0,203))
