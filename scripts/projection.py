@@ -3,9 +3,10 @@ import numpy as np
 import tensorflow as tf
 import cv2
 
-import rospy
+import rospy, pdb
 
 from label2color import  background, label_to_color
+from helper import get_cropped_uv_rotated, is_out_of_bound, is_out_of_bound_rotated
 
 class LidarSeg:
     def __init__(self, neural_net_graph_path):
@@ -44,20 +45,9 @@ class LidarSeg:
 
         
 
-    def get_cropped_uv(self, u, v):
-        v = v- 500
-        u = int(u * 2.0 / 3.0)
-        v = int(v * 2.0 / 3.0)
-        return u,v
-        
-    def is_out_of_bound(self, u, v):
-        if u < 0 or u > 1200 or \
-           v < 500 or v > 1100 :
-            return True
-        
 
 
-    def project_lidar_to_seg(self, lidar, rgb_img, camera_ind, camera_shape, is_output_distribution):
+    def project_lidar_to_seg(self, lidar, rgb_img, camera_ind, camera_shape, is_output_distribution, original_rgb):
         """
         assume the lidar points can all be projected to this img
         assume the rgb img shape meets the requirement of the neural net input
@@ -85,7 +75,17 @@ class LidarSeg:
 
         # distort the lidar points based on the distortion map file
         projected_lidar_2d = self.distort_map[camera_ind].distort(projected_lidar_2d)
+        print(projected_lidar_2d.shape)
+        assert(projected_lidar_2d.size > 0)
+        for col in range(projected_lidar_2d.shape[1]):
+            p = (int(projected_lidar_2d[0, col]),
+                 int(projected_lidar_2d[1, col ]))
 
+            cv2.circle(original_rgb,(p[0], p[1]),2, (0,0,255))
+        cv2.imwrite("projected"+str(self.counter)+".png", original_rgb)
+        exit(0)
+
+        
         projected_points = []
         projected_index  = []
         labels = []
@@ -93,10 +93,10 @@ class LidarSeg:
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
 
-            if self.is_out_of_bound(u, v):
+            if is_out_of_bound(u, v):
                 continue
             print("coordinate "+str((u,v,d)) )
-            u ,v = self.get_cropped_uv(u, v)
+            u ,v = get_cropped_uv_rotated(u, v)
             projected_points.append(lidar[:, col])
             labels.append(out[int(v), int(u)])
 	    original_rgb.append(rgb_img[int(v), int(u)])

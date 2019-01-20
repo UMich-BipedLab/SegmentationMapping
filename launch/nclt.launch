@@ -3,7 +3,7 @@
 <launch>
 
   <!-- ARGS -->
-  <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/graph_frozen_nclt_400p.pb" />
+  <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/graph_frozen_nclt_2019_01_17.pb" />
     <?ignore
     <arg name="bagfile" default="/home/nvidia/seagate/bagfiles/2019-01-17/vel1.bag /home/nvidia/seagate/bagfiles/2019-01-17/nclt_60s_04_29_img.bag" />
 

@@ -14,7 +14,7 @@ import cv2
 import matplotlib.pyplot as plt
 import argparse
 import re
-
+import pdb
 class DistortMap(object):
 
     def __init__(self, undist2distorted_map, scale=1.0, fmask=None):
@@ -49,14 +49,14 @@ class DistortMap(object):
         for col in range(lidar_projected_2d.shape[1]):
             u = int(lidar_projected_2d[0, col])
             v = int(lidar_projected_2d[1, col])
-            if u < 0 or u > 1200 or v< 500 or v > 1100:
+            if u < 0 or u > 1600 or v< 0 or v > 1200:
                 continue
             dist = np.ones((1,3))
-            dist[0] = self.mapu[u, v]
-            dist[0,1] = self.mapv[u, v]
-            distort.append(dist)
-
-        return np.array(distorted).transpose()
+            dist[0, 0] = self.mapu[u, v]
+            dist[0, 1] = self.mapv[u, v]
+            distorted.append(dist)
+        distorted = np.squeeze(np.array(distorted)).transpose()
+        return distorted
 
 
 

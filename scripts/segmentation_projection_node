@@ -16,7 +16,7 @@ from distort import DistortMap
 
 import cv2
 import numpy as np
-
+from scipy.ndimage import rotate
 # debug
 import pdb
 
@@ -64,7 +64,7 @@ class SegmentationProjectionNode:
         
         # construct message filter
         print("construct ms filter "+str(len(sub_list)))
-        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 30, 0.12)
+        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 30, 0.15)
         ts.registerCallback(self.callback)
  
 
@@ -139,7 +139,8 @@ class SegmentationProjectionNode:
         lidar_distribution = []
         original_rgb = []
 	for i in range(len(img_msg_list)):
-            original_image = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="bgr8")
+            original_img = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="bgr8")
+            original_image = rotate(original_img, 270)
             camera_shape = original_image.shape
             if self.net_input_width > original_image.shape[1] or \
                self.net_input_height > original_image.shape[0]:
@@ -156,7 +157,7 @@ class SegmentationProjectionNode:
             
             labeled_points_i, projected_lidar_i, dist_i, original_i = self.lidar_seg.project_lidar_to_seg(lidar, cv_image, i,\
                                                                                               camera_shape,\
-                                                                                              self.is_output_dist)
+                                                                                                          self.is_output_dist, original_img)
             labeled_points  = labeled_points  + labeled_points_i
             projected_lidar = projected_lidar + projected_lidar_i
             lidar_distribution = lidar_distribution + dist_i
