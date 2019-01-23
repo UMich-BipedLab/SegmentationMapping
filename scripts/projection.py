@@ -47,7 +47,7 @@ class LidarSeg:
 
 
 
-    def project_lidar_to_seg(self, lidar, rgb_img, camera_ind, camera_shape, is_output_distribution, original_rgb):
+    def project_lidar_to_seg(self, lidar, rgb_img, camera_ind, camera_shape, is_output_distribution, original_img):
         """
         assume the lidar points can all be projected to this img
         assume the rgb img shape meets the requirement of the neural net input
@@ -71,20 +71,30 @@ class LidarSeg:
         projected_lidar_2d = np.matmul( lidar_in_cam, lidar)
         projected_lidar_2d[0, :] = projected_lidar_2d[0, :] / projected_lidar_2d[2, :]
         projected_lidar_2d[1, :] = projected_lidar_2d[1, :] / projected_lidar_2d[2, :]
-        projected_lidar_2d[2, :] = 1
-
+        print("total number of lidar : "+str(projected_lidar_2d.shape))
+        #projected_lidar_2d[2, :] = 1
+        idx_infront = projected_lidar_2d[2, :]>0
+        x_im = projected_lidar_2d[0, :][idx_infront]
+        y_im = projected_lidar_2d[1, :][idx_infront]
+        z_im = projected_lidar_2d[2, :][idx_infront]
+        points_on_img = np.zeros((3, x_im.size))
+        points_on_img[0, :] = x_im
+        points_on_img[1, :] = y_im
+        points_on_img[2, :] = z_im
         # distort the lidar points based on the distortion map file
-        projected_lidar_2d = self.distort_map[camera_ind].distort(projected_lidar_2d)
-        print(projected_lidar_2d.shape)
-        assert(projected_lidar_2d.size > 0)
+        projected_lidar_2d = self.distort_map[camera_ind].distort(points_on_img)
+
+        
+        # for debug use
         for col in range(projected_lidar_2d.shape[1]):
-            p = (int(projected_lidar_2d[0, col]),
-                 int(projected_lidar_2d[1, col ]))
-
-            cv2.circle(original_rgb,(p[0], p[1]),2, (0,0,255))
-        cv2.imwrite("projected"+str(self.counter)+".png", original_rgb)
-        exit(0)
-
+            u = int(round(projected_lidar_2d[0, col] , 0))
+            v = int(round(projected_lidar_2d[1, col] , 0))
+            cv2.circle(original_img, (u, v),2, (0,0,255))
+        #cv2.imwrite("original_project"+str(self.counter)+".png", original_img)
+        cv2.imshow("original projection", original_img)
+        cv2.waitKey(100)
+        print("write projection")
+        
         
         projected_points = []
         projected_index  = []
@@ -92,11 +102,10 @@ class LidarSeg:
 	original_rgb = []
         for col in range(projected_lidar_2d.shape[1]):
             u, v, d = projected_lidar_2d[:, col]
-
+            u ,v = get_cropped_uv_rotated(u, v)
             if is_out_of_bound(u, v):
                 continue
-            print("coordinate "+str((u,v,d)) )
-            u ,v = get_cropped_uv_rotated(u, v)
+
             projected_points.append(lidar[:, col])
             labels.append(out[int(v), int(u)])
 	    original_rgb.append(rgb_img[int(v), int(u)])
@@ -112,21 +121,21 @@ class LidarSeg:
         for i in range(len(labels )):
             p = (int(projected_points_2d[0, index[i]]),
                  int(projected_points_2d[1, index[i]]))
-            #cv2.putText(to_show, str(int(labels[i])), 
+            #cv2.putText(to_show,. str(int(labels[i])), 
             #            p,
             #            cv2.FONT_HERSHEY_SIMPLEX, 5, (0,0,203))
-            if self.is_out_of_bound(p[0], p[1]): continue
+            #if is_out_of_bound(p[0], p[1]): continue
             
             if labels[i] in label_to_color:
                 color = label_to_color[labels[i]]
             else:
                 color = label_to_color[background]
 
-            cv2.circle(to_show,self.get_cropped_uv(p[0], p[1]),2, color)
-        cv2.imwrite("projected"+str(self.counter)+".png", to_show)
+            cv2.circle(to_show,get_cropped_uv_rotated(p[0], p[1]),2, color)
+        #cv2.imwrite("projected"+str(self.counter)+".png", to_show)
         self.counter +=1
-        #cv2.imshow("projected",to_show)
-        # cv2.waitKey(0)
+        cv2.imshow("projected",to_show)
+        cv2.waitKey(100)
 
         
 

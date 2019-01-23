@@ -14,6 +14,8 @@ from label2color import label_to_color, background
 # our distortion lib
 from distort import DistortMap
 
+from project_vel_to_cam import load_vel_hits
+
 import cv2
 import numpy as np
 from scipy.ndimage import rotate
@@ -39,17 +41,21 @@ class SegmentationProjectionNode:
         # lidar subscription
         lidar_topic = rospy.get_param('~lidar')
         lidar_sub   = message_filters.Subscriber(lidar_topic, PointCloud2)
+        # for nclt only: pointcloud comes from synced files
+        self.vel_path = rospy.get_param('~velodyne_synced_path')
 
         # multiple camera subscription
         camera_num  = rospy.get_param('~camera_num')
         image_topic_list = []
-        sub_list   = [lidar_sub]
+        sub_list   = []#[lidar_sub]
+        
         # cv_bridge
         self.bridge = CvBridge()
         self.net_input_height = rospy.get_param("~neural_net_input_height")
         self.net_input_width  = rospy.get_param("~neural_net_input_width")
         self.is_output_dist = rospy.get_param("~is_output_distribution")
 
+        # adding camera matrixes for each camera, and lidar_seg instance for each camera
         for i in range(camera_num):
             print("adding camera "+str(i))
             image_topic_list.append( rospy.get_param('~image_'+str(i)) )
@@ -64,7 +70,7 @@ class SegmentationProjectionNode:
         
         # construct message filter
         print("construct ms filter "+str(len(sub_list)))
-        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 30, 0.15)
+        ts = message_filters.ApproximateTimeSynchronizer(sub_list, 30, 0.06)
         ts.registerCallback(self.callback)
  
 
@@ -106,6 +112,7 @@ class SegmentationProjectionNode:
             r_channel.values.append(color[0])
             g_channel.values.append(color[1])
             b_channel.values.append(color[2])
+            # use this instead if you want publish original rgb
 	    #r_channel.values.append(original_rgb[i][0])
 	    #g_channel.values.append(original_rgb[i][1])
             #b_channel.values.append(original_rgb[i][2])
@@ -127,11 +134,19 @@ class SegmentationProjectionNode:
 
 
     def callback(self,* sub_list):
-        img_msg_list = sub_list[1:]
-        lidar_msg    = sub_list[0]
-        lidar = self.pc2_msg_to_lidar(lidar_msg)
+        img_msg_list = sub_list#sub_list[1:]
+        #lidar_msg    = sub_list[0]
+        #lidar = self.pc2_msg_to_lidar(lidar_msg)
 
-        print("callback at time "+str(lidar_msg.header.stamp.to_sec()))
+        seq = str(int(round(float(int(img_msg_list[0].header.stamp.to_nsec()) )/  1000, 0  )))
+        print("vel file "+seq)
+        lidar = load_vel_hits(self.vel_path + seq +".bin")
+        if (lidar.shape[1]< 5000):
+            print("lidar points twoo few: points is "+str(lidar.shape[1])+" at time "+str(lidar_msg.header.stamp.to_sec()))
+            return
+
+        #print("callback at lidar time "+str(lidar_msg.header.stamp.to_sec()))
+        print("camera time "+str(img_msg_list[0].header.stamp.to_sec()))
         # result container for successfully projected points
         # and corresponding labels
         projected_lidar = []
@@ -142,13 +157,13 @@ class SegmentationProjectionNode:
             original_img = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="bgr8")
             original_image = rotate(original_img, 270)
             camera_shape = original_image.shape
-            if self.net_input_width > original_image.shape[1] or \
-               self.net_input_height > original_image.shape[0]:
-                original_image = cv2.copyMakeBorder(original_image,0,0,
-                                              max(0, self.net_input_height - original_image.shape[0]),
-                                              max(0, self.net_input_width-original_image.shape[1]),
-                                              cv2.BORDER_CONSTANT,value=(0,0,0))
-            cv_image = original_image[500:1100, 0:1200]
+            #if self.net_input_width > original_image.shape[1] or \
+            #   self.net_input_height > original_image.shape[0]:
+            #    original_image = cv2.copyMakeBorder(original_image,0,0,
+            #                                  max(0, self.net_input_height - original_image.shape[0]),
+            #                                  max(0, self.net_input_width-original_image.shape[1]),
+            #                                  cv2.BORDER_CONSTANT,value=(0,0,0))
+            cv_image = original_image[500:1100, -1200:]
             cv_image = cv2.resize(cv_image, dsize=(800, 400), interpolation=cv2.INTER_CUBIC)
             #cv_image = original_image[:self.net_input_height, :self.net_input_width, :]
             #cv2.imwrite("original.png", cv_image)
@@ -164,7 +179,7 @@ class SegmentationProjectionNode:
             original_rgb = original_rgb + original_i
 	    
             
-        self.publish_pointcloud(lidar_msg.header, projected_lidar, labeled_points, lidar_distribution, original_rgb)
+        self.publish_pointcloud(img_msg_list[0].header, projected_lidar, labeled_points, lidar_distribution, original_rgb)
 
 
 

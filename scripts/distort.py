@@ -13,8 +13,9 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import argparse
-import re
-import pdb
+import re, pdb
+from scipy.interpolate import RectBivariateSpline
+
 class DistortMap(object):
 
     def __init__(self, undist2distorted_map, scale=1.0, fmask=None):
@@ -47,13 +48,41 @@ class DistortMap(object):
         distorted = []#np.ones(lidar_projected_2d.shape)
         counter = 0
         for col in range(lidar_projected_2d.shape[1]):
-            u = int(lidar_projected_2d[0, col])
-            v = int(lidar_projected_2d[1, col])
-            if u < 0 or u > 1600 or v< 0 or v > 1200:
+            u_f = lidar_projected_2d[0, col]
+            v_f = lidar_projected_2d[1, col]
+            if u_f < 0 or u_f >= 1600 or v_f < 0 or v_f >= 1200:
                 continue
+            
+            u_l = int(lidar_projected_2d[0, col])
+            u_u = int(lidar_projected_2d[0, col]) + 1
+            v_l = int(lidar_projected_2d[1, col])
+            v_u = int(lidar_projected_2d[1, col]) + 1
+
+            # ex: lu: v is l, u is u
+            # the (v, u) at four grid corners
+            u_ll = self.mapu[v_l, u_l]
+            v_ll = self.mapv[v_l, u_l]
+
+            u_lu = self.mapu[v_l, u_u]
+            v_lu = self.mapv[v_l, u_u]
+
+            u_ul = self.mapu[v_u, u_l]
+            v_ul = self.mapv[v_u, u_l]
+
+            u_uu = self.mapu[v_u, u_u]
+            v_uu = self.mapv[v_u, u_u]
+
             dist = np.ones((1,3))
-            dist[0, 0] = self.mapu[u, v]
-            dist[0, 1] = self.mapv[u, v]
+            sp_u = RectBivariateSpline(np.array([v_l, v_u]),  \
+                                       np.array([u_l, u_u]),  \
+                                       np.array([[u_ll, u_lu],[u_ul, u_uu]]), kx=1, ky=1)
+            sp_v = RectBivariateSpline(np.array([v_l, v_u]),  \
+                                       np.array([u_l, u_u]),  \
+                                       np.array([[v_ll, v_lu],[v_ul, v_uu]]), kx=1, ky=1)
+            
+            dist[0 ,0] = sp_u.ev(v_f, u_f)
+            dist[0, 1] = sp_v.ev(v_f, u_f)
+
             distorted.append(dist)
         distorted = np.squeeze(np.array(distorted)).transpose()
         return distorted
