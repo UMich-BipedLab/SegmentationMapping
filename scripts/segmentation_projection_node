@@ -32,7 +32,9 @@ class SegmentationProjectionNode:
         rospy.sleep(0.5)
         
         # the segmentation object
-        self.lidar_seg = LidarSeg(rospy.get_param('~neural_net_graph'))
+        self.is_output_distribution = rospy.get_param("~is_output_distribution")
+        self.num_classes = rospy.get_param("~num_classes")
+        self.lidar_seg = LidarSeg(rospy.get_param('~neural_net_graph'), self.is_output_distribution, self.num_classes)
 
         # labeled pointcloud publisher
         label_pc_topic = rospy.get_param('~labeled_pointcloud')
@@ -53,7 +55,7 @@ class SegmentationProjectionNode:
         self.bridge = CvBridge()
         self.net_input_height = rospy.get_param("~neural_net_input_height")
         self.net_input_width  = rospy.get_param("~neural_net_input_width")
-        self.is_output_dist = rospy.get_param("~is_output_distribution")
+
 
         # adding camera matrixes for each camera, and lidar_seg instance for each camera
         for i in range(camera_num):
@@ -86,10 +88,11 @@ class SegmentationProjectionNode:
         return lidar
         
 
-    def publish_pointcloud(self, lidar_header, lidar, labels, lidar_class_dist, original_rgb):
+    def publish_pointcloud(self, lidar_header, lidar, labels, class_distribution, original_rgb):
         #declaring pointcloud
         to_publish = PointCloud()
         to_publish.header = lidar_header
+        to_publish.header.frame_id = "body" # for nclt only
         
         # filling labels
         label_channel = ChannelFloat32()
@@ -104,6 +107,14 @@ class SegmentationProjectionNode:
         b_channel = ChannelFloat32()
         b_channel.name = "b"
         b_channel.values = []
+        if self.is_output_distribution:
+            distribution_channel_list = []
+            for c in range(self.num_classes):
+                dist_c = ChannelFloat32()
+                dist_c.name = "p_class_"+str(c)
+                dist_c.values = []
+                distribution_channel_list.append(dist_c)
+            
         for i in range(len(labels)):
             if labels[i] in label_to_color:
                 color = label_to_color[labels[i]]
@@ -116,7 +127,14 @@ class SegmentationProjectionNode:
 	    #r_channel.values.append(original_rgb[i][0])
 	    #g_channel.values.append(original_rgb[i][1])
             #b_channel.values.append(original_rgb[i][2])
+            if self.is_output_distribution:
+                assert(np.argmax(class_distribution[i]) == labels[i])
+                for c in range(self.num_classes):
+                    distribution_channel_list[c].values.append(class_distribution[i][c])
+            
         to_publish.channels = [label_channel, r_channel, g_channel, b_channel]
+        if self.is_output_distribution:
+            to_publish.channels.extend(distribution_channel_list)
         
         #filling points
         to_publish.points = []
@@ -151,8 +169,8 @@ class SegmentationProjectionNode:
         # and corresponding labels
         projected_lidar = []
         labeled_points  = []
-        lidar_distribution = []
         original_rgb = []
+        class_distribution = []
 	for i in range(len(img_msg_list)):
             original_img = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="bgr8")
             original_image = rotate(original_img, 270)
@@ -170,16 +188,17 @@ class SegmentationProjectionNode:
             #cv2.imshow("original",to_show)
             #cv2.waitKey(0)
             
-            labeled_points_i, projected_lidar_i, dist_i, original_i = self.lidar_seg.project_lidar_to_seg(lidar, cv_image, i,\
-                                                                                              camera_shape,\
-                                                                                                          self.is_output_dist, original_img)
+            labeled_points_i, projected_lidar_i, class_distribution_i, original_i = self.lidar_seg.project_lidar_to_seg(lidar, cv_image, i,\
+                                                                                                                        camera_shape,\
+                                                                                                                        self.is_output_distribution, original_img)
             labeled_points  = labeled_points  + labeled_points_i
             projected_lidar = projected_lidar + projected_lidar_i
-            lidar_distribution = lidar_distribution + dist_i
+            class_distribution = class_distribution + class_distribution_i
             original_rgb = original_rgb + original_i
+
 	    
             
-        self.publish_pointcloud(img_msg_list[0].header, projected_lidar, labeled_points, lidar_distribution, original_rgb)
+        self.publish_pointcloud(img_msg_list[0].header, projected_lidar, labeled_points, class_distribution, original_rgb)
 
 
 

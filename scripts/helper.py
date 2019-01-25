@@ -28,3 +28,7 @@ def is_out_of_bound_rotated(u, v):
     else:
         return False
     
+
+def softmax(dist_arr):
+    exps = np.exp(dist_arr)
+    return exps/np.sum(exps)
