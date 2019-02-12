@@ -118,13 +118,18 @@ class LidarSeg:
             label = out[int(v), int(u)] if out[v, u] < self.num_output_class else 0
 
             labels.append(label)
-	    original_rgb.append(rgb_img[int(v), int(u)])
+	    original_rgb.append(rgb_img[int(v), int(u), :])
+            if (rgb_img[int(v), int(u), :][0] == 128 and \
+                rgb_img[int(v), int(u), :][1] ==64 and \
+                rgb_img[int(v), int(u), :][2] == 128):
+                print("project: original_rgb is 128,64, 128")
+
             projected_index.append(col)
             if self.is_output_distribution:
                 distribution_normalized = softmax(distribution[int(v), int(u), :])
                 class_distribution.append(distribution_normalized)
                 
-        self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
+        #self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
         return labels, projected_points, class_distribution, original_rgb
         
 

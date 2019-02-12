@@ -16,7 +16,7 @@ from distort import DistortMap
 
 from project_vel_to_cam import load_vel_hits
 
-import cv2
+import cv2, time
 import numpy as np
 from scipy.ndimage import rotate
 # debug
@@ -107,6 +107,16 @@ class SegmentationProjectionNode:
         b_channel = ChannelFloat32()
         b_channel.name = "b"
         b_channel.values = []
+        r_original_channel = ChannelFloat32()
+        r_original_channel.name = "r_original"
+        r_original_channel.values = []
+        g_original_channel = ChannelFloat32()
+        g_original_channel.name = "g_original"
+        g_original_channel.values = []
+        b_original_channel = ChannelFloat32()
+        b_original_channel.name = "b_original"
+        b_original_channel.values = []
+
         if self.is_output_distribution:
             distribution_channel_list = []
             for c in range(self.num_classes):
@@ -124,15 +134,15 @@ class SegmentationProjectionNode:
             g_channel.values.append(color[1])
             b_channel.values.append(color[2])
             # use this instead if you want publish original rgb
-	    #r_channel.values.append(original_rgb[i][0])
-	    #g_channel.values.append(original_rgb[i][1])
-            #b_channel.values.append(original_rgb[i][2])
+	    r_original_channel.values.append(original_rgb[i][0])
+	    g_original_channel.values.append(original_rgb[i][1])
+            b_original_channel.values.append(original_rgb[i][2])
             if self.is_output_distribution:
                 assert(np.argmax(class_distribution[i]) == labels[i])
                 for c in range(self.num_classes):
                     distribution_channel_list[c].values.append(class_distribution[i][c])
             
-        to_publish.channels = [label_channel, r_channel, g_channel, b_channel]
+        to_publish.channels = [label_channel, r_channel, g_channel, b_channel, r_original_channel, g_original_channel, b_original_channel]
         if self.is_output_distribution:
             to_publish.channels.extend(distribution_channel_list)
         
@@ -152,13 +162,18 @@ class SegmentationProjectionNode:
 
 
     def callback(self,* sub_list):
+        start = time.time()
         img_msg_list = sub_list#sub_list[1:]
         #lidar_msg    = sub_list[0]
         #lidar = self.pc2_msg_to_lidar(lidar_msg)
 
         seq = str(int(round(float(int(img_msg_list[0].header.stamp.to_nsec()) )/  1000, 0  )))
         print("vel file "+seq)
-        lidar = load_vel_hits(self.vel_path + seq +".bin")
+        try:
+            lidar = load_vel_hits(self.vel_path + seq +".bin")
+        except IOError:
+            print("file does not exist: " + self.vel_path + seq +".bin")
+            return
         if (lidar.shape[1]< 5000):
             print("lidar points twoo few: points is "+str(lidar.shape[1])+" at time "+str(lidar_msg.header.stamp.to_sec()))
             return
@@ -199,8 +214,7 @@ class SegmentationProjectionNode:
 	    
             
         self.publish_pointcloud(img_msg_list[0].header, projected_lidar, labeled_points, class_distribution, original_rgb)
-
-
+        print("time cost: " + str(time.time() - start) )
 
     def main(self):
         print("spin...")

@@ -24,12 +24,12 @@
     
       <param name="neural_net_graph"     type="string" value="$(arg neural_net_graph_path)"/>
       <param name="is_output_distribution" type="int"  value="0" />
-      <param name="num_classes"           type="int"   value="20"/>
+      <param name="num_classes"           type="int"   value="14"/>
       <param name="neural_net_input_width" type="int"  value="800" />
       <param name="neural_net_input_height" type="int" value="400" />
     
       <param name="lidar"                type="string" value="/velodyne_points" />
-      <param name="velodyne_synced_path" type="string" value="/home/nvidia/seagate/NCLT/04_29/2012-04-29/velodyne_sync/" />
+      <param name="velodyne_synced_path" type="string" value="/home/biped/seagate/NCLT/04_29/2012-04-29/velodyne_sync/" />
     
       <param name="camera_num"           type="int"    value='3' />
       <param name="image_0"              type="string" value="/camera1/color/image_raw" />
