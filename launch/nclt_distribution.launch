@@ -3,7 +3,7 @@
 <launch>
 
   <!-- ARGS -->
-  <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/graph_frozen_nclt_2019_01_17.pb" />
+  <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/mobilenet_frozen_nclt_2019_01_17.pb" />
     <?ignore
     <arg name="bagfile" default="/home/nvidia/seagate/bagfiles/2019-01-17/vel1.bag /home/nvidia/seagate/bagfiles/2019-01-17/nclt_60s_04_29_img.bag" />
 
@@ -21,15 +21,20 @@
     <node pkg="segmentation_projection"     type="segmentation_projection_node" name="segmentation_projection_node" output="screen" clear_params="true" required="true" >
       
       <param name="labeled_pointcloud"   type="string" value="labeled_pointcloud" />
-    
+
+      
       <param name="neural_net_graph"     type="string" value="$(arg neural_net_graph_path)"/>
-      <param name="is_output_distribution" type="int"  value="1" />
       <param name="num_classes"           type="int"   value="14"/>
       <param name="neural_net_input_width" type="int"  value="800" />
       <param name="neural_net_input_height" type="int" value="400" />
-    
+      <param name="network_label_output_tensor"  type="string" value="network/output/ArgMax:0" />
+      <param name="network_image_input_tensor"   type="string" value="import/network/input/Placeholder:0"/>
+      <param name="network_is_train_input_tensor" type="string" value="import/network/input/Placeholder_2:0" />
+      <param name="network_distribution_output_tensor"  type="string" value="import/network/upscore_8s/upscore8/upscore8/BiasAdd:0" />
+
+      
       <param name="lidar"                type="string" value="/velodyne_points" />
-      <param name="velodyne_synced_path" type="string" value="/home/nvidia/seagate/NCLT/04_29/2012-04-29/velodyne_sync/" />
+      <param name="velodyne_synced_path" type="string" value="/home/biped/seagate/NCLT/04_29/2012-04-29-lidar/velodyne_sync/" />
     
       <param name="camera_num"           type="int"    value='3' />
       <param name="image_0"              type="string" value="/camera1/color/image_raw" />

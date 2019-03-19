@@ -7,13 +7,13 @@
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="vzero@todo.todo">vzero</maintainer>
+  <maintainer email="rzh@umich.edu">Ray Zhang</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
   <!-- Commonly used license strings: -->
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
-  <license>TODO</license>
+  <license>MIT</license>
 
 
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
@@ -52,7 +52,13 @@
   <build_depend>message_filters</build_depend>
   <build_depend>rospy</build_depend>
   <build_depend>sensor_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>tf2_ros</build_depend>
+  <build_depend>pcl_ros</build_depend>
   <build_depend>cv_bridge</build_depend>
+  <build_depend>octomap</build_depend>
+  
   <build_export_depend>message_filters</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
   <build_export_depend>sensor_msgs</build_export_depend>
@@ -60,7 +66,12 @@
   <exec_depend>message_filters</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>octomap</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>pcl_ros</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

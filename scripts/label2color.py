@@ -1,15 +1,21 @@
 #!/usr/bin/python
 
-background = 255 
+# source: https://github.com/UMich-BipedLab/segmentation_projection
+# maintainer: Ray Zhang    rzh@umich.edu
+
+
+background = 255
+
+# RGB
 label_to_color = {                                                                                                              
-    2: (128, 64,128), # road
+    2: (255,255,255), # road
     3: (128, 64,128), # sidewalk
-    5: ( 192, 192, 192), # building
+    5: (255,128,0), # building
     10: (192,192,192), # pole
     12: (255,255,0 ), # traffic sign
     6: (107,142, 35), # vegetation
-    4: (107,142, 35), # terrain
-    13: ( 135, 206, 236 ),  # sky
+    4: (128,128,0), # terrain
+    13: ( 135, 206, 235 ),  # sky
     1: (  30, 144, 255 ),  # water
     8 :(220, 20, 60), # person
     7: ( 0, 0,142),  # car
@@ -18,4 +24,4 @@ label_to_color = {
 
     0: (0 ,0, 0),       # background
     background: (0,0,0) # background
-} 
+}

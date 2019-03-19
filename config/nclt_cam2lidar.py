@@ -68,5 +68,5 @@ if __name__ == "__main__":
     T_c_lb3 = np.linalg.inv(T_lb3_c)
     # because nclt lidar are in the body frame .........
     T_c_body = np.matmul(T_c_lb3, T_lb3_body)
-    np.save(sys.argv[2], T_c_body)
+    np.save(sys.argv[2], (T_c_body))
     

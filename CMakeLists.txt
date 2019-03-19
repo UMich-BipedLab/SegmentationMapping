@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(segmentation_projection)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -10,13 +10,29 @@ project(segmentation_projection)
 find_package(catkin REQUIRED COMPONENTS
   message_filters
   rospy
+  #octomap
   sensor_msgs
+  geometry_msgs
+  nav_msgs
+  tf2_ros
+  cassie_msgs
   cv_bridge
+  pcl_ros
+  tf_conversions
+  eigen_conversions
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
+find_package(PCL REQUIRED)
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
+find_package(Eigen3 REQUIRED)
+
+#find_package(octomap REQUIRED)
+#include_directories(${OCTOMAP_INCLUDE_DIRS})
+#target_link_libraries(${OCTOMAP_LIBRARIES})
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -104,7 +120,7 @@ catkin_python_setup()
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES segmentation_projection
 #  CATKIN_DEPENDS message_filter rospy sensor_msgs
 #  DEPENDS system_lib
@@ -117,9 +133,13 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
-  ${catkin_INCLUDE_DIRS}
+ include
+${catkin_INCLUDE_DIRS}
+${PCL_INCLUDE_DIRS}
+${EIGEN3_INCLUDE_DIRS}
 )
+
+
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -134,7 +154,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/segmentation_projection_node.cpp)
+add_executable(labeled_pc_map_node src/labeled_pc_map_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -147,9 +167,11 @@ include_directories(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(labeled_pc_map_node
+  ${catkin_LIBRARIES}
+  ${PCL_COMMON_LIBRARIES}
+  ${PCL_IO_LIBRARIES}
+)
 
 #############
 ## Install ##
@@ -161,7 +183,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-   scripts/segmentation_projection_node    scripts/projection.py
+   scripts/segmentation_projection_node    scripts/projection.py scripts/gt_pose2bag.py 
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 

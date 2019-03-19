@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+
+<launch>
+  <param name="use_sim_time" value="true"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="map" 
+        args="0.0 0.0 0.0 0 0 0 1 map body 100" />
+  
+  <arg name="pc_bag_file" default="/home/biped/seagate/bagfiles/2019-03-12/nclt_04_29_labeled_pc_tf.bag" />
+
+ 
+  <node pkg="rosbag" type="play" name="player" output="screen" args="--clock -q $(arg pc_bag_file)"/>
+
+  <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+    <param name="resolution" value="0.05" />
+    <!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
+    <param name="frame_id" type="string" value="map" />
+    <!-- maximum range to integrate (speedup!) -->
+    <param name="sensor_model/max_range" value="5.0" />
+    <!-- data source to integrate (PointCloud2) -->
+    <remap from="cloud_in" to="/labeled_pointcloud_pc2" />
+    
+  </node>
+  
+  <!-- Visualize in rviz -->
+  <node pkg="rviz" type="rviz" name="rviz"  />
+
+  <!-- Painting point cloud -->
+  <node pkg="segmentation_projection" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen">
+
+    <remap from="~cloud_in" to="/labeled_pointcloud" />
+    <remap from="~cloud_out" to="/labeled_pointcloud_pc2" />
+  </node>
+
+</launch>

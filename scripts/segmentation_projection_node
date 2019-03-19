@@ -1,4 +1,10 @@
 #!/usr/bin/python
+
+
+# source: https://github.com/UMich-BipedLab/segmentation_projection
+# maintainer: Ray Zhang    rzh@umich.edu
+
+
 # ros
 import rospy
 import ros_numpy
@@ -8,7 +14,7 @@ from geometry_msgs.msg import Point32
 from cv_bridge import CvBridge, CvBridgeError
 
 # our projection library
-from projection import LidarSeg
+from projection import LidarSeg, NeuralNetConfigs
 # map label to color
 from label2color import label_to_color, background
 # our distortion lib
@@ -30,11 +36,27 @@ class SegmentationProjectionNode:
         
         rospy.init_node('segmenation_projection_node', anonymous=True)
         rospy.sleep(0.5)
+
+        try:
+            is_train_input_tensor = rospy.get_param("~network_is_train_input_tensor")
+        except KeyError:
+            is_train_input_tensor = None
+        try:
+            distribution_tensor = rospy.get_param("~network_distribution_output_tensor")
+        except KeyError:
+            distribution_tensor = None
         
         # the segmentation object
-        self.is_output_distribution = rospy.get_param("~is_output_distribution")
-        self.num_classes = rospy.get_param("~num_classes")
-        self.lidar_seg = LidarSeg(rospy.get_param('~neural_net_graph'), self.is_output_distribution, self.num_classes)
+        self.network_config = NeuralNetConfigs(rospy.get_param("~neural_net_graph"),\
+                                               rospy.get_param("~num_classes"),\
+                                               rospy.get_param("~network_image_input_tensor"),\
+                                               is_train_input_tensor, \
+                                               rospy.get_param("~neural_net_input_width"),\
+                                               rospy.get_param("~neural_net_input_height"), \
+                                               rospy.get_param("~network_label_output_tensor"),\
+                                               distribution_tensor)
+                                               
+        self.lidar_seg = LidarSeg(self.network_config)
 
         # labeled pointcloud publisher
         label_pc_topic = rospy.get_param('~labeled_pointcloud')
@@ -68,7 +90,8 @@ class SegmentationProjectionNode:
             intrinsic_mat  = np.load(intrinsic_file)
             distort        = DistortMap(distortion_file)
             self.lidar_seg.add_cam(intrinsic_mat, T_cam2lidar, distort)
-            sub_list.append(message_filters.Subscriber(image_topic_list[i], Image))
+            if i < 3:
+                sub_list.append(message_filters.Subscriber(image_topic_list[i], Image))
         
         # construct message filter
         print("construct ms filter "+str(len(sub_list)))
@@ -117,9 +140,9 @@ class SegmentationProjectionNode:
         b_original_channel.name = "b_original"
         b_original_channel.values = []
 
-        if self.is_output_distribution:
+        if self.network_config.distribution_output_tensor is not None:
             distribution_channel_list = []
-            for c in range(self.num_classes):
+            for c in range(self.network_config.num_classes):
                 dist_c = ChannelFloat32()
                 dist_c.name = "p_class_"+str(c)
                 dist_c.values = []
@@ -137,13 +160,13 @@ class SegmentationProjectionNode:
 	    r_original_channel.values.append(original_rgb[i][0])
 	    g_original_channel.values.append(original_rgb[i][1])
             b_original_channel.values.append(original_rgb[i][2])
-            if self.is_output_distribution:
+            if self.network_config.distribution_output_tensor is not None:
                 assert(np.argmax(class_distribution[i]) == labels[i])
-                for c in range(self.num_classes):
+                for c in range(self.network_config.num_classes):
                     distribution_channel_list[c].values.append(class_distribution[i][c])
             
         to_publish.channels = [label_channel, r_channel, g_channel, b_channel, r_original_channel, g_original_channel, b_original_channel]
-        if self.is_output_distribution:
+        if self.network_config.distribution_output_tensor is not None:
             to_publish.channels.extend(distribution_channel_list)
         
         #filling points
@@ -156,7 +179,7 @@ class SegmentationProjectionNode:
             to_publish.points.append(p)
             
         #publish
-        print ("publishing pointcloud with labels")
+        print ("publishing pointcloud with labels, # of points is "+str(len(lidar)))
         self.labeled_pointcloud_publisher.publish(to_publish)
 
 
@@ -168,28 +191,35 @@ class SegmentationProjectionNode:
         #lidar = self.pc2_msg_to_lidar(lidar_msg)
 
         seq = str(int(round(float(int(img_msg_list[0].header.stamp.to_nsec()) )/  1000, 0  )))
-        print("vel file "+seq)
         try:
             lidar = load_vel_hits(self.vel_path + seq +".bin")
         except IOError:
-            print("file does not exist: " + self.vel_path + seq +".bin")
+            print("velodyne file does not exist: " + self.vel_path + seq +".bin")
             return
         if (lidar.shape[1]< 5000):
-            print("lidar points twoo few: points is "+str(lidar.shape[1])+" at time "+str(lidar_msg.header.stamp.to_sec()))
+            print("lidar points too few: points is "+str(lidar.shape[1])+" at time "+str(lidar_msg.header.stamp.to_sec()))
             return
 
         #print("callback at lidar time "+str(lidar_msg.header.stamp.to_sec()))
         print("camera time "+str(img_msg_list[0].header.stamp.to_sec()))
+
+        '''
+        if lidar.shape[1] == 51311:
+            pdb.set_trace()
+        else:
+            return
+        '''
+
         # result container for successfully projected points
         # and corresponding labels
         projected_lidar = []
         labeled_points  = []
         original_rgb = []
         class_distribution = []
+
 	for i in range(len(img_msg_list)):
             original_img = self.bridge.imgmsg_to_cv2(img_msg_list[i] , desired_encoding="bgr8")
             original_image = rotate(original_img, 270)
-            camera_shape = original_image.shape
             #if self.net_input_width > original_image.shape[1] or \
             #   self.net_input_height > original_image.shape[0]:
             #    original_image = cv2.copyMakeBorder(original_image,0,0,
@@ -197,21 +227,22 @@ class SegmentationProjectionNode:
             #                                  max(0, self.net_input_width-original_image.shape[1]),
             #                                  cv2.BORDER_CONSTANT,value=(0,0,0))
             cv_image = original_image[500:1100, -1200:]
-            cv_image = cv2.resize(cv_image, dsize=(800, 400), interpolation=cv2.INTER_CUBIC)
+            cv_image = cv2.resize(cv_image, \
+                                  dsize=(self.network_config.input_width, self.network_config.input_height),\
+                                  interpolation=cv2.INTER_CUBIC)
             #cv_image = original_image[:self.net_input_height, :self.net_input_width, :]
             #cv2.imwrite("original.png", cv_image)
             #cv2.imshow("original",to_show)
             #cv2.waitKey(0)
             
-            labeled_points_i, projected_lidar_i, class_distribution_i, original_i = self.lidar_seg.project_lidar_to_seg(lidar, cv_image, i,\
-                                                                                                                        camera_shape,\
-                                                                                                                        self.is_output_distribution, original_img)
+            labeled_points_i, projected_lidar_i, class_distribution_i, original_i = self.lidar_seg.project_lidar_to_seg(lidar,
+                                                                                                                        cv_image,
+                                                                                                                        i,
+                                                                                                                        original_img)
             labeled_points  = labeled_points  + labeled_points_i
             projected_lidar = projected_lidar + projected_lidar_i
             class_distribution = class_distribution + class_distribution_i
             original_rgb = original_rgb + original_i
-
-	    
             
         self.publish_pointcloud(img_msg_list[0].header, projected_lidar, labeled_points, class_distribution, original_rgb)
         print("time cost: " + str(time.time() - start) )
