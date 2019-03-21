@@ -38,6 +38,40 @@ def Rz( radian):
     M[3,3] =  1
     return M
 
+def ssc_to_homo(ssc):
+
+    # Convert 6-DOF ssc coordinate transformation to 4x4 homogeneous matrix
+    # transformation
+
+    sr = np.sin(np.pi/180.0 * ssc[3])
+    cr = np.cos(np.pi/180.0 * ssc[3])
+
+    sp = np.sin(np.pi/180.0 * ssc[4])
+    cp = np.cos(np.pi/180.0 * ssc[4])
+
+    sh = np.sin(np.pi/180.0 * ssc[5])
+    ch = np.cos(np.pi/180.0 * ssc[5])
+
+    H = np.zeros((4, 4))
+
+    H[0, 0] = ch*cp
+    H[0, 1] = -sh*cr + ch*sp*sr
+    H[0, 2] = sh*sr + ch*sp*cr
+    H[1, 0] = sh*cp
+    H[1, 1] = ch*cr + sh*sp*sr
+    H[1, 2] = -ch*sr + sh*sp*cr
+    H[2, 0] = -sp
+    H[2, 1] = cp*sr
+    H[2, 2] = cp*cr
+
+    H[0, 3] = ssc[0]
+    H[1, 3] = ssc[1]
+    H[2, 3] = ssc[2]
+
+    H[3, 3] = 1
+
+    return H
+
 # r, p, y is in degree
 def sixdof_to_transformation(sixdof):
     x,y,z, r,p,y = sixdof
@@ -61,12 +95,13 @@ if __name__ == "__main__":
 
 
 
-    T_lb3_c = sixdof_to_transformation(x_lb3_c )
-    T_body_lb3 = sixdof_to_transformation(x_body_lb3)
+    T_lb3_c = ssc_to_homo(x_lb3_c )
+    T_body_lb3 = ssc_to_homo(x_body_lb3)
 
     T_lb3_body = np.linalg.inv(T_body_lb3)
     T_c_lb3 = np.linalg.inv(T_lb3_c)
     # because nclt lidar are in the body frame .........
     T_c_body = np.matmul(T_c_lb3, T_lb3_body)
+    print(T_c_body)
     np.save(sys.argv[2], (T_c_body))
     

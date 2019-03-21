@@ -3,8 +3,8 @@
 <launch>
   <param name="use_sim_time" value="true"/>
 
-  <node pkg="tf" type="static_transform_publisher" name="map" 
-        args="0.0 0.0 0.0 0 0 0 1 map body 100" />
+  <!--<node pkg="tf" type="static_transform_publisher" name="map" 
+        args="0.0 0.0 0.0 0 0 0 1 map body 100" /> -->
   
   <arg name="pc_bag_file" default="/home/biped/seagate/bagfiles/2019-03-12/nclt_04_29_labeled_pc_tf.bag" />
 

@@ -29,7 +29,7 @@ int main(int argc, char ** argv){
 
   ros::init(argc, argv, "labeled_pc_map_node");
 
-  ROS_INFO("nclt pc_painter init....");
+  ROS_INFO("nclt 14-class pc_painter init....");
   segmentation_projection::PointCloudPainter<14> painter;
 
   ros::spin();

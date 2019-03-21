@@ -1,5 +1,7 @@
 # !/usr/bin/python
 #
+# source: http://robots.engin.umich.edu/nclt/
+#
 # Demonstrates how to project velodyne points to camera imagery. Requires a binary
 # velodyne sync file, undistorted image, and assumes that the calibration files are
 # in the directory.

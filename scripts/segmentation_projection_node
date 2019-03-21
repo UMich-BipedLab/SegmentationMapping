@@ -22,6 +22,8 @@ from distort import DistortMap
 
 from project_vel_to_cam import load_vel_hits
 
+import pcl  # python-pcl
+import pcl.pcl_visualization
 import cv2, time
 import numpy as np
 from scipy.ndimage import rotate
@@ -90,8 +92,7 @@ class SegmentationProjectionNode:
             intrinsic_mat  = np.load(intrinsic_file)
             distort        = DistortMap(distortion_file)
             self.lidar_seg.add_cam(intrinsic_mat, T_cam2lidar, distort)
-            if i < 3:
-                sub_list.append(message_filters.Subscriber(image_topic_list[i], Image))
+            sub_list.append(message_filters.Subscriber(image_topic_list[i], Image))
         
         # construct message filter
         print("construct ms filter "+str(len(sub_list)))
@@ -110,8 +111,28 @@ class SegmentationProjectionNode:
             lidar[2, ind] = p[2]
         return lidar
         
-
-    def publish_pointcloud(self, lidar_header, lidar, labels, class_distribution, original_rgb):
+    def publish_pcl_pc2(self,  lidar, labels):
+        '''
+        for debugging: visualizing the constructed labeled pointcloud before
+                       we publish them
+        '''
+        cloud = pcl.PointCloud_PointXYZRGB()
+        points = np.zeros((len(lidar), 4), dtype=np.float32)
+        for i in range(0, len(lidar)):
+            # set Point Plane
+            points[i][0] = lidar[i][0]
+            points[i][1] = lidar[i][1]
+            points[i][2] = lidar[i][2]
+            color = label_to_color[labels[i]]
+            points[i][3] = color[0] << 16 | color[1] << 8 | color[2]
+        cloud.from_array(points)
+        pcl_vis = pcl.pcl_visualization.CloudViewing()
+        pcl_vis.ShowColorCloud(cloud)
+        v = True
+        while v:
+            v=not(pcl_vis.WasStopped())
+        
+    def publish_pointcloud_msg(self, lidar_header, lidar, labels, class_distribution, original_rgb):
         #declaring pointcloud
         to_publish = PointCloud()
         to_publish.header = lidar_header
@@ -190,18 +211,22 @@ class SegmentationProjectionNode:
         #lidar_msg    = sub_list[0]
         #lidar = self.pc2_msg_to_lidar(lidar_msg)
 
+        # note: nclt velodyne are synced files
         seq = str(int(round(float(int(img_msg_list[0].header.stamp.to_nsec()) )/  1000, 0  )))
+        if float(int(img_msg_list[0].header.stamp.to_nsec()) )/  1000 < 1335704344924045:
+            print ("ignoring " + seq)
+            return
         try:
             lidar = load_vel_hits(self.vel_path + seq +".bin")
         except IOError:
             print("velodyne file does not exist: " + self.vel_path + seq +".bin")
             return
         if (lidar.shape[1]< 5000):
-            print("lidar points too few: points is "+str(lidar.shape[1])+" at time "+str(lidar_msg.header.stamp.to_sec()))
+            print("lidar points too few: # of points is "+str(lidar.shape[1])+" at time "+str(lidar_msg.header.stamp.to_sec()))
             return
 
         #print("callback at lidar time "+str(lidar_msg.header.stamp.to_sec()))
-        print("camera time "+str(img_msg_list[0].header.stamp.to_sec()))
+        print("camera time "+str(img_msg_list[0].header.stamp.to_sec())  + ", # of lidar points is " + str(lidar.shape[1]))
 
         '''
         if lidar.shape[1] == 51311:
@@ -243,8 +268,11 @@ class SegmentationProjectionNode:
             projected_lidar = projected_lidar + projected_lidar_i
             class_distribution = class_distribution + class_distribution_i
             original_rgb = original_rgb + original_i
-            
-        self.publish_pointcloud(img_msg_list[0].header, projected_lidar, labeled_points, class_distribution, original_rgb)
+
+        # for debugging
+        self.publish_pcl_pc2(projected_lidar, labeled_points )
+        
+        self.publish_pointcloud_msg(img_msg_list[0].header, projected_lidar, labeled_points, class_distribution, original_rgb)
         print("time cost: " + str(time.time() - start) )
 
     def main(self):

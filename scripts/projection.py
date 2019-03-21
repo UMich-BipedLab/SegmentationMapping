@@ -90,11 +90,6 @@ class LidarSeg:
                 distribution = self.sess.run([self.distribution_tensor],
                                              feed_dict={self.x: np.expand_dims(cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB),axis=0)})[0]
             
-            #out = out [0,:,:]
-            #background_sum = np.sum(distribution[0, :, :, self.num_output_class:], axis=2) + distribution[0, :, :, 0]
-            #distribution = distribution[0, :, :, :self.num_output_class]
-            #distribution = distribution[0, :, :, :self.num_output_class]
-            #distribution[0, :, :, 0] = background_sum
             distribution = distribution[0, :, :, :]
         else:
             if self.is_train_input_tensor is not None:
@@ -126,7 +121,7 @@ class LidarSeg:
         points_on_img[2, :] = z_im
         # distort the lidar points based on the distortion map file
         projected_lidar_2d = self.distort_map[camera_ind].distort(points_on_img)
-        print(" shape of projected points is "+str(points_on_img.shape))
+        print(" shape of projected points from camera # " + str(camera_ind)+ " is "+str(points_on_img.shape))
         #######################################################################
         # for debug use: visualize the projection on the original rgb image
         #######################################################################
@@ -190,10 +185,10 @@ class LidarSeg:
                 color = label_to_color[background]
 
             cv2.circle(to_show,get_cropped_uv_rotated(p[0], p[1], 512/600.0),2, (color[2], color[1], color[0] ))
-        cv2.imwrite("segmentation_projection_out/projected"+str(self.counter)+".png", to_show)
+        #cv2.imwrite("segmentation_projection_out/projected"+str(self.counter)+".png", to_show)
 
-        #cv2.imshow("projected",to_show)
-    #cv2.waitKey(100)
+        cv2.imshow("projected",to_show)
+        cv2.waitKey(100)
 
         
 

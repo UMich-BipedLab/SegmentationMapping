@@ -4,17 +4,11 @@
 
   <!-- ARGS -->
   <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/deeplab_frozen_graph_2019_02_27.pb" />
-    <?ignore
-    <arg name="bagfile" default="/home/nvidia/seagate/bagfiles/2019-01-17/vel1.bag /home/nvidia/seagate/bagfiles/2019-01-17/nclt_60s_04_29_img.bag" />
+
+    <arg name="bagfile" default="/home/biped/seagate/bagfiles/2019-03-18/nclt_04_29_4000_cam1_5.bag" />
 
     
-    <!-- BAGFILE -->
-    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) -q -l" />
-
     <!-- RVIZ -->
-  
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rvizfile)"/>
-    ?>
 
     <!-- Run segmentation node -->
 
@@ -52,16 +46,19 @@
  
       <param name="image_3"              type="string" value="/camera2/color/image_raw" />
       <param name="cam_intrinsic_3"    type="string" value="$(find segmentation_projection)/config/nclt_cams/nclt_intrinsic_2.npy"/>	
-      <param name="cam2lidar_file_3"     type="string" value="$(find segmentation_projection)/config/nclt_cams/cam2lidar_2.npy"/>
+      <param name="cam2lidar_file_3"     type="string" value="$(find segmentation_projection)/config/nclt_cams/cam2body_2.npy"/>
       <param name="cam_distortion_3"        type="string" value="$(find segmentation_projection)/config/nclt_cams/U2D_Cam2_1616X1232.txt" />
       
       <param name="image_4"              type="string" value="/camera3/color/image_raw" />
       <param name="cam_intrinsic_4"    type="string" value="$(find segmentation_projection)/config/nclt_cams/nclt_intrinsic_3.npy"/>	
-      <param name="cam2lidar_file_4"     type="string" value="$(find segmentation_projection)/config/nclt_cams/cam2lidar_3.npy"/>
+      <param name="cam2lidar_file_4"     type="string" value="$(find segmentation_projection)/config/nclt_cams/cam2body_3.npy"/>
       <param name="cam_distortion_4"        type="string" value="$(find segmentation_projection)/config/nclt_cams/U2D_Cam3_1616X1232.txt" />
      
     
   </node>
+
+    <!-- BAGFILE -->
+    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) -q -l" />
 
 
 

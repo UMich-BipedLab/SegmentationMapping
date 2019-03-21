@@ -223,9 +223,10 @@ namespace segmentation_projection {
 
     tf::StampedTransform transform;
     try{
-      listener_.waitForTransform(this->body_frame_, this->static_frame_,  
-                                 ros::Time(0), ros::Duration(1.0));
-      this->listener_.lookupTransform(this->body_frame_, this->static_frame_,  
+      this->listener_.waitForTransform(this->static_frame_, this->body_frame_,
+                                       cloud_msg->header.stamp, ros::Duration(4.0) );
+      
+      this->listener_.lookupTransform(this->static_frame_, this->body_frame_,  
                                       cloud_msg->header.stamp, transform);
     }
     catch (tf::TransformException ex){
