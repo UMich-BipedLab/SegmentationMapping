@@ -14,7 +14,7 @@ from collections import namedtuple
 import rospy, pdb
 
 from label2color import  background, label_to_color
-from helper import get_cropped_uv_rotated, is_out_of_bound, is_out_of_bound_rotated, softmax
+from helper import get_cropped_uv_rotated, is_out_of_bound, is_out_of_bound_rotated, softmax, publish_pcl_pc2, publish_pcl_pc2_label
 
 
 NeuralNetConfigs = namedtuple("NeuralNetConfigs", "path \
@@ -103,6 +103,7 @@ class LidarSeg:
             distribution = []
             out = out [0,:,:]
 
+
         # project lidar points into camera coordinates
         T_c2l = self.cam2lidar[camera_ind][:3, :]
         lidar_in_cam = np.matmul(self.intrinsic[camera_ind], T_c2l )
@@ -110,8 +111,8 @@ class LidarSeg:
         projected_lidar_2d[0, :] = projected_lidar_2d[0, :] / projected_lidar_2d[2, :]
         projected_lidar_2d[1, :] = projected_lidar_2d[1, :] / projected_lidar_2d[2, :]
         #print("total number of lidar : "+str(projected_lidar_2d.shape))
-        #projected_lidar_2d[2, :] = 1
         idx_infront = projected_lidar_2d[2, :]>0
+        print("idx_front sum is " + str(np.sum(idx_infront)))
         x_im = projected_lidar_2d[0, :][idx_infront]
         y_im = projected_lidar_2d[1, :][idx_infront]
         z_im = projected_lidar_2d[2, :][idx_infront]
@@ -119,9 +120,15 @@ class LidarSeg:
         points_on_img[0, :] = x_im
         points_on_img[1, :] = y_im
         points_on_img[2, :] = z_im
+        lidar_on_img = np.zeros((3, x_im.size))
+        lidar_on_img[0, :] = lidar[0, :][idx_infront]
+        lidar_on_img[1, :] = lidar[1, :][idx_infront]
+        lidar_on_img[2, :] = lidar[2, :][idx_infront]
+                
         # distort the lidar points based on the distortion map file
-        projected_lidar_2d = self.distort_map[camera_ind].distort(points_on_img)
-        print(" shape of projected points from camera # " + str(camera_ind)+ " is "+str(points_on_img.shape))
+        projected_lidar_2d, remaining_ind = self.distort_map[camera_ind].distort(points_on_img)
+        lidar_on_img = lidar_on_img[:, remaining_ind]
+        print(projected_lidar_2d.shape, lidar_on_img.shape)
         #######################################################################
         # for debug use: visualize the projection on the original rgb image
         #######################################################################
@@ -137,16 +144,16 @@ class LidarSeg:
         ########################################################################
         
         projected_points = []
-        projected_index  = []
+        projected_index  = []  # just for visualization
         labels = []
 	original_rgb = []
         class_distribution = []
         for col in range(projected_lidar_2d.shape[1]):
-            u, v, d = projected_lidar_2d[:, col]
+            u, v, _ = projected_lidar_2d[:, col]
             u ,v = get_cropped_uv_rotated(u, v, rgb_img.shape[1] * 1.0 / 1200 )
             if is_out_of_bound(u, v, rgb_img.shape[1], rgb_img.shape[0]):
                 continue
-            projected_points.append(lidar[:, col])
+            projected_points.append(lidar_on_img[:, col])
             if self.distribution_tensor is not None:
                 distribution_normalized = softmax(distribution[int(v), int(u), :])
                 distribution_normalized[0] += np.sum(distribution_normalized[self.num_output_class:])
@@ -158,13 +165,13 @@ class LidarSeg:
             labels.append(label)
 	    original_rgb.append(rgb_img[int(v), int(u), :])
             projected_index.append(col)
-
+        print(" shape of projected points from camera # " + str(camera_ind)+ " is "+str(points_on_img.shape)+", # of in range points is "+str(len(labels)))
         ##########################################################################
         # uncomment this if you want to visualize the projection && labeling result
-        self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
+        #self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
         self.counter +=1
         ##########################################################################
-        
+        #publish_pcl_pc2_label(projected_points, labels )
         return labels, projected_points, class_distribution, original_rgb
         
 

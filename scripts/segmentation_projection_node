@@ -19,11 +19,11 @@ from projection import LidarSeg, NeuralNetConfigs
 from label2color import label_to_color, background
 # our distortion lib
 from distort import DistortMap
-
+# load velodyne file
 from project_vel_to_cam import load_vel_hits
+# visualize pcl
+from helper import publish_pcl_pc2_label
 
-import pcl  # python-pcl
-import pcl.pcl_visualization
 import cv2, time
 import numpy as np
 from scipy.ndimage import rotate
@@ -111,26 +111,6 @@ class SegmentationProjectionNode:
             lidar[2, ind] = p[2]
         return lidar
         
-    def publish_pcl_pc2(self,  lidar, labels):
-        '''
-        for debugging: visualizing the constructed labeled pointcloud before
-                       we publish them
-        '''
-        cloud = pcl.PointCloud_PointXYZRGB()
-        points = np.zeros((len(lidar), 4), dtype=np.float32)
-        for i in range(0, len(lidar)):
-            # set Point Plane
-            points[i][0] = lidar[i][0]
-            points[i][1] = lidar[i][1]
-            points[i][2] = lidar[i][2]
-            color = label_to_color[labels[i]]
-            points[i][3] = color[0] << 16 | color[1] << 8 | color[2]
-        cloud.from_array(points)
-        pcl_vis = pcl.pcl_visualization.CloudViewing()
-        pcl_vis.ShowColorCloud(cloud)
-        v = True
-        while v:
-            v=not(pcl_vis.WasStopped())
         
     def publish_pointcloud_msg(self, lidar_header, lidar, labels, class_distribution, original_rgb):
         #declaring pointcloud
@@ -213,9 +193,9 @@ class SegmentationProjectionNode:
 
         # note: nclt velodyne are synced files
         seq = str(int(round(float(int(img_msg_list[0].header.stamp.to_nsec()) )/  1000, 0  )))
-        if float(int(img_msg_list[0].header.stamp.to_nsec()) )/  1000 < 1335704344924045:
-            print ("ignoring " + seq)
-            return
+        #if float(int(img_msg_list[0].header.stamp.to_nsec()) )/  1000 < 1335704344924045:
+        #    print ("ignoring " + seq)
+        #    return
         try:
             lidar = load_vel_hits(self.vel_path + seq +".bin")
         except IOError:
@@ -264,13 +244,14 @@ class SegmentationProjectionNode:
                                                                                                                         cv_image,
                                                                                                                         i,
                                                                                                                         original_img)
+
             labeled_points  = labeled_points  + labeled_points_i
             projected_lidar = projected_lidar + projected_lidar_i
             class_distribution = class_distribution + class_distribution_i
             original_rgb = original_rgb + original_i
 
         # for debugging
-        self.publish_pcl_pc2(projected_lidar, labeled_points )
+        #publish_pcl_pc2_label(projected_lidar, labeled_points )
         
         self.publish_pointcloud_msg(img_msg_list[0].header, projected_lidar, labeled_points, class_distribution, original_rgb)
         print("time cost: " + str(time.time() - start) )

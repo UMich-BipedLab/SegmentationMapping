@@ -46,13 +46,14 @@ class DistortMap(object):
         lidar_projected_2d:  3*N np array. The last row contains only 1s
         '''
         distorted = []#np.ones(lidar_projected_2d.shape)
+        remaining_ind = []
         counter = 0
         for col in range(lidar_projected_2d.shape[1]):
             u_f = lidar_projected_2d[0, col]
             v_f = lidar_projected_2d[1, col]
             if u_f < 0 or u_f >= 1600 or v_f < 0 or v_f >= 1200:
                 continue
-            
+            remaining_ind.append(col)
             u_l = int(lidar_projected_2d[0, col])
             u_u = int(lidar_projected_2d[0, col]) + 1
             v_l = int(lidar_projected_2d[1, col])
@@ -85,7 +86,7 @@ class DistortMap(object):
 
             distorted.append(dist)
         distorted = np.squeeze(np.array(distorted)).transpose()
-        return distorted
+        return distorted, remaining_ind
 
 
 

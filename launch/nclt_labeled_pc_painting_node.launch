@@ -6,11 +6,16 @@
   <!--<node pkg="tf" type="static_transform_publisher" name="map" 
         args="0.0 0.0 0.0 0 0 0 1 map body 100" /> -->
   
-  <arg name="pc_bag_file" default="/home/biped/seagate/bagfiles/2019-03-12/nclt_04_29_labeled_pc_tf.bag" />
+  <arg name="pc_bag_file" default="/home/biped/seagate/bagfiles/2019-03-21/nclt_04_29_labeled_pc_tf.bag" />
+
+  <!--<arg name="pc_bag_file" default="/home/biped/seagate/bagfiles/2019-03-12/2019-03-21-23-41-42.bag /home/biped/seagate/bagfiles/2019-03-12/nclt_gt_filtered.bag" /> -->
 
  
-  <node pkg="rosbag" type="play" name="player" output="screen" args="--clock -q $(arg pc_bag_file)"/>
 
+  <node pkg="rosbag" type="play" name="player" output="screen" args="--clock  -q $(arg pc_bag_file)"/>
+  
+  
+  <?ignore
   <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
     <param name="resolution" value="0.05" />
     <!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
@@ -21,15 +26,22 @@
     <remap from="cloud_in" to="/labeled_pointcloud_pc2" />
     
   </node>
+  ?>
   
   <!-- Visualize in rviz -->
   <node pkg="rviz" type="rviz" name="rviz"  />
 
   <!-- Painting point cloud -->
   <node pkg="segmentation_projection" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen">
-
+  
     <remap from="~cloud_in" to="/labeled_pointcloud" />
     <remap from="~cloud_out" to="/labeled_pointcloud_pc2" />
+
+    <param name="painting_enabled" type="bool" value="true" />
+    <param name="stacking_visualization_enabled" type="bool" value="true" />
+    <param name="path_visualization_enabled" type="bool" value="true" />
+    <param name="save_pcd_enabled" type="bool" value="true" />
+    
   </node>
 
 </launch>

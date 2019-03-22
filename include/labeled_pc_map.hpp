@@ -79,6 +79,8 @@ namespace segmentation_projection {
       pnh.getParam("static_frame", static_frame_);
       pnh.getParam("body_frame", body_frame_);
       pnh.getParam("save_pcd_enabled", save_pcd_enabled_);
+      pnh.getParam( "stacking_visualization_enabled", stacking_visualization_enabled_);
+      pnh.getParam("path_visualization_enabled", path_visualization_enabled_);
 
       this->pc_subscriber_ = pnh.subscribe("cloud_in", 100, &PointCloudPainter::PointCloudCallback, this);
       this->pc2_subscriber_ = pnh.subscribe("cloud2_in", 100, &PointCloudPainter::PointCloud2Callback, this);
@@ -222,17 +224,19 @@ namespace segmentation_projection {
     pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS> > pointcloud_seg;
 
     tf::StampedTransform transform;
-    try{
-      this->listener_.waitForTransform(this->static_frame_, this->body_frame_,
-                                       cloud_msg->header.stamp, ros::Duration(4.0) );
+    if (this->stacking_visualization_enabled_) {
+      try{
+        //this->listener_.waitForTransform(this->static_frame_, this->body_frame_,
+        //                                 cloud_msg->header.stamp, ros::Duration(10.0) );
       
-      this->listener_.lookupTransform(this->static_frame_, this->body_frame_,  
-                                      cloud_msg->header.stamp, transform);
-    }
-    catch (tf::TransformException ex){
-      std::cout<<"tf look for failed\n";
-      ROS_ERROR("%s",ex.what());
-      return;
+        this->listener_.lookupTransform(this->static_frame_, this->body_frame_,  
+                                        cloud_msg->header.stamp, transform);
+      }
+      catch (tf::TransformException ex){
+        std::cout<<"tf look for failed\n";
+        ROS_ERROR("%s",ex.what());
+        return;
+      }
     }
   
     //for (int j = 0; j < img.rows; ++j) {
@@ -242,6 +246,13 @@ namespace segmentation_projection {
       p.x = cloud_msg->points[i].x;
       p.y = cloud_msg->points[i].y;
       p.z = cloud_msg->points[i].z;
+
+      // filter out sky, background
+      int label = cloud_msg->channels[0].values[i];
+      if (label == 13 || label== 0)
+        continue;
+
+      
       // pack r/g/b into rgb
       uint8_t r = cloud_msg->channels[1].values[i];
       uint8_t g = cloud_msg->channels[2].values[i];

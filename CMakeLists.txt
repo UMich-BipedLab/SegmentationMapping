@@ -10,7 +10,7 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   message_filters
   rospy
-  #octomap
+  octomap
   sensor_msgs
   geometry_msgs
   nav_msgs
@@ -183,7 +183,7 @@ target_link_libraries(labeled_pc_map_node
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-   scripts/segmentation_projection_node    scripts/projection.py scripts/gt_pose2bag.py 
+   scripts/segmentation_projection_node    scripts/projection.py scripts/gt_pose2bag.py  scripts/helper.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 

@@ -5,7 +5,9 @@
   <!-- ARGS -->
   <arg name="neural_net_graph_path" default="$(find segmentation_projection)/config/deeplab_frozen_graph_2019_02_27.pb" />
 
-    <arg name="bagfile" default="/home/biped/seagate/bagfiles/2019-03-18/nclt_04_29_4000_cam1_5.bag" />
+  <!-- <arg name="bagfile" default="/home/biped/seagate/bagfiles/2019-03-18/nclt_04_29_car_scene.bag" /> -->
+
+  <arg name="bagfile" default="/home/biped/seagate/bagfiles/2019-03-18/nclt_04_29_4000_cam1_5.bag" />
 
     
     <!-- RVIZ -->
@@ -58,7 +60,7 @@
   </node>
 
     <!-- BAGFILE -->
-    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) -q -l" />
+    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bagfile) -q  -r 0.01428" />
 
 
 
