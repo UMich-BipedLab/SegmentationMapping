@@ -44,6 +44,10 @@
 #include <boost/shared_ptr.hpp>
 #include <pcl/impl/point_types.hpp>
 
+// for octmap
+#include <octomap/octomap.h>
+#include <octomap/OcTree.h>
+
 namespace pcl {
   template <unsigned int NUM_CLASS>
   struct PointSegmentedDistribution
@@ -77,6 +81,7 @@ namespace segmentation_projection {
       ros::NodeHandle pnh("~");
       pnh.getParam("painting_enabled", painting_enabled_);
       pnh.getParam("static_frame", static_frame_);
+      pnh.getParam("distribution_enabled", distribution_enabled_);
       pnh.getParam("body_frame", body_frame_);
       pnh.getParam("save_pcd_enabled", save_pcd_enabled_);
       pnh.getParam( "stacking_visualization_enabled", stacking_visualization_enabled_);
@@ -117,6 +122,7 @@ namespace segmentation_projection {
     bool save_pcd_enabled_;
     bool stacking_visualization_enabled_;
     bool path_visualization_enabled_;
+    bool octomap_enabled_;
 
     // for voxel grid map
     ros::Publisher stacked_pc_publisher_;
@@ -128,7 +134,12 @@ namespace segmentation_projection {
     ros::Publisher path_publisher_;
     nav_msgs::Path path_;
     void attach_new_pose_to_path(tf::StampedTransform & T_map2body_new, const std_msgs::Header & header);
+
+    // for octomap
+    octomap::OcTree octree;
+    
   };
+  
 
 
   template <unsigned int NUM_CLASS>
@@ -272,6 +283,7 @@ namespace segmentation_projection {
         for (int c = 0; c != NUM_CLASS; c++){
           p_seg.label_distribution[c] = cloud_msg->channels[c+7].values[i];
           sums += p_seg.label_distribution[c];
+          std::cout<<p_seg.label_distribution[c]<<std::endl;
         }
         assert(sums > 0.99 & sums < 1.01);
       }

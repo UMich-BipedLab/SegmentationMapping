@@ -10,7 +10,7 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   message_filters
   rospy
-  octomap
+  #octomap
   sensor_msgs
   geometry_msgs
   nav_msgs
