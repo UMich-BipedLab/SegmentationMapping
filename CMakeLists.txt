@@ -30,9 +30,9 @@ add_definitions(${PCL_DEFINITIONS})
 
 find_package(Eigen3 REQUIRED)
 
-#find_package(octomap REQUIRED)
-#include_directories(${OCTOMAP_INCLUDE_DIRS})
-#target_link_libraries(${OCTOMAP_LIBRARIES})
+find_package(octomap REQUIRED)
+include_directories(${OCTOMAP_INCLUDE_DIRS})
+link_directories(${OCTOMAP_LIBRARY_DIRS})
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -171,6 +171,7 @@ target_link_libraries(labeled_pc_map_node
   ${catkin_LIBRARIES}
   ${PCL_COMMON_LIBRARIES}
   ${PCL_IO_LIBRARIES}
+  ${OCTOMAP_LIBRARIES}
 )
 
 #############
