@@ -80,6 +80,7 @@ namespace segmentation_projection {
       , body_frame_("/body")
       , stacking_visualization_enabled_(true)
       , stacked_pc_ptr_(new pcl::PointCloud<pcl::PointXYZRGB>)
+      , pointcloud_seg_stacked_ptr_(new typename pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>)
       , path_visualization_enabled_(true)
       , octomap_enabled_(false)
       , octree_ptr_(new octomap::ColorOcTree(0.1))
@@ -152,7 +153,10 @@ namespace segmentation_projection {
     ros::Publisher stacked_pc_publisher_;
     pcl::VoxelGrid<pcl::PointXYZRGB> voxel_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr stacked_pc_ptr_;
-    void merge_new_pc_to_voxel_grids(pcl::PointCloud<pcl::PointXYZRGB> & new_cloud, tf::StampedTransform & T_map2body);
+    typename pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS> >::Ptr pointcloud_seg_stacked_ptr_;
+
+    template <typename PointT>
+    void merge_new_pc_to_voxel_grids(typename pcl::PointCloud<PointT> & new_cloud, typename pcl::PointCloud<PointT> & stacked_cloud, tf::StampedTransform & T_map2body);
 
     // for path visualization
     ros::Publisher path_publisher_;
@@ -170,21 +174,25 @@ namespace segmentation_projection {
   
 
 
-  template <unsigned int NUM_CLASS>
+  template <unsigned int NUM_CLASS> template<typename PointT>
   inline void
-  PointCloudPainter<NUM_CLASS>::merge_new_pc_to_voxel_grids(pcl::PointCloud<pcl::PointXYZRGB> & new_cloud, tf::StampedTransform & T_map2body){
+  PointCloudPainter<NUM_CLASS>::merge_new_pc_to_voxel_grids(typename pcl::PointCloud<PointT> & new_cloud, typename pcl::PointCloud<PointT> & stacked_pc, tf::StampedTransform & T_map2body){
     Eigen::Affine3d T_eigen;
     tf::transformTFToEigen (T_map2body,T_eigen);
-    pcl::PointCloud<pcl::PointXYZRGB> transformed_cloud;
+    typename pcl::PointCloud<PointT> transformed_cloud;
     pcl::transformPointCloud (new_cloud, transformed_cloud , T_eigen);
-    *stacked_pc_ptr_ = *stacked_pc_ptr_ + transformed_cloud;
-    //std::cout<<"# of stacked pc ptr is "<<stacked_pc_ptr_->height * stacked_pc_ptr_->width<<std::endl;
-    
-    /*
-      this->voxel_.setInputCloud (stacked_pc_ptr_);
-      this->voxel_.setLeafSize (0.1f, 0.1f, 0.1f);
-      this->voxel_.filter (*stacked_pc_ptr_);
-    */
+    stacked_pc = stacked_pc + transformed_cloud;
+
+    // Voxel Grid filtering: uncommet this if the input is sparse
+    //pcl::PCLPointCloud2::Ptr cloud (new pcl::PCLPointCloud2 ());
+    //pcl::PCLPointCloud2::Ptr cloud_filtered (new pcl::PCLPointCloud2 ());
+    //pcl::toPCLPointCloud2(stacked_pc, *cloud);    
+    // Create the filtering object
+    //pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
+   //sor.setInputCloud (cloud);
+    //sor.setLeafSize (0.1f, 0.1f, 0.1f);
+    //sor.filter (*cloud_filtered);
+    //pcl::fromPCLPointCloud2(*cloud_filtered, stacked_pc);
     
   }
 
@@ -199,7 +207,7 @@ namespace segmentation_projection {
     pose_stamped.header = header;
     pose_stamped.header.frame_id = this->body_frame_;
     tf::poseEigenToMsg (T_eigen, pose_stamped.pose);
-    std::cout<<"xyz: "<<T_eigen(0, 3)<<", "<<T_eigen(1, 3)<<", "<<T_eigen(2, 3)<<", at time:"<< header.stamp.toNSec()<<" \n";
+    //std::cout<<"xyz: "<<T_eigen(0, 3)<<", "<<T_eigen(1, 3)<<", "<<T_eigen(2, 3)<<", at time:"<< header.stamp.toNSec()<<" \n";
 
     path_.header.stamp = header.stamp;
     path_.header.frame_id = this->static_frame_;
@@ -298,6 +306,7 @@ namespace segmentation_projection {
     pcl::PointCloud<pcl::PointXYZRGB> pointcloud_pcl;
     pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS> > pointcloud_seg;
 
+
     tf::StampedTransform transform;
 
     try{
@@ -315,7 +324,7 @@ namespace segmentation_projection {
 
   
     //for (int j = 0; j < img.rows; ++j) {
-    //std::cout<<"At time "<<cloud_msg->header.stamp.toSec()<<", # of lidar pts is "<<cloud_msg->points.size()<<std::endl;
+    std::cout<<"At time "<<cloud_msg->header.stamp.toSec()<<", # of lidar pts is "<<cloud_msg->points.size()<<std::endl;
     for (int i = 0; i < cloud_msg->points.size(); ++i) {
       pcl::PointXYZRGB p;
       p.x = cloud_msg->points[i].x;
@@ -351,7 +360,7 @@ namespace segmentation_projection {
         for (int c = 0; c != NUM_CLASS; c++){
           p_seg.label_distribution[c] = cloud_msg->channels[c+7].values[i];
           sums += p_seg.label_distribution[c];
-          std::cout<<p_seg.label_distribution[c]<<std::endl;
+          //std::cout<<p_seg.label_distribution[c]<<std::endl;
         }
         assert(sums > 0.99 & sums < 1.01);
       }
@@ -369,11 +378,27 @@ namespace segmentation_projection {
 
     // publish the stacked pc map
     if (this->stacking_visualization_enabled_) {
-      this->merge_new_pc_to_voxel_grids(pointcloud_pcl, transform);            
+      pcl_conversions::toPCL(cloud_msg->header, pointcloud_pcl.header);
+      pointcloud_pcl.header.frame_id = this->static_frame_;
+      this->merge_new_pc_to_voxel_grids<pcl::PointXYZRGB>(pointcloud_pcl, *stacked_pc_ptr_, transform);            
       pcl::toROSMsg(*(this->stacked_pc_ptr_), stacked_cloud);
       stacked_cloud.header = cloud_msg->header;
       stacked_cloud.header.frame_id = this->static_frame_;
       stacked_pc_publisher_.publish((stacked_cloud));
+     
+      if (distribution_enabled_ && save_pcd_enabled_) {
+          pcl_conversions::toPCL(cloud_msg->header, pointcloud_seg_stacked_ptr_->header);
+          pointcloud_seg_stacked_ptr_->header.frame_id = this->static_frame_;
+          merge_new_pc_to_voxel_grids<pcl::PointSegmentedDistribution<NUM_CLASS>>(pointcloud_seg, *pointcloud_seg_stacked_ptr_, transform);
+          static uint64_t counter = 0;
+          if (counter % 10 == 0) {
+            ROS_INFO("Save PCD file for the stacked pointcloud with label distribution");
+            pcl::io::savePCDFile ("segmented_pcd/stacked_pc_distribution.pcd", *pointcloud_seg_stacked_ptr_);
+            pcl::io::savePCDFile ("segmented_pcd/stacked_pc_rgb.pcd", pointcloud_pcl);
+          }
+          counter ++;
+      }
+
     }
 
     // publish the path
@@ -382,10 +407,10 @@ namespace segmentation_projection {
       path_publisher_.publish(this->path_);
     }
     
-    // save the result as pcd files
+    // save the result of each time step as pcd files
     if (this->save_pcd_enabled_) {
       std::string name_pcd = std::to_string(cloud_msg->header.stamp.toNSec());
-      pcl::io::savePCDFile ("segmented_pcd/" + name_pcd + ".pcd", pointcloud_seg);
+      //pcl::io::savePCDFile ("segmented_pcd/" + name_pcd + ".pcd", pointcloud_seg);
     }
 
     // produce the color octomap. 

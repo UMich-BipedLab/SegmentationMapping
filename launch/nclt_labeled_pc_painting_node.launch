@@ -12,7 +12,7 @@
 
  
 
-  <node pkg="rosbag" type="play" name="player" output="screen" args="--clock -r 0.1 -q $(arg pc_bag_file)"/>
+  <node pkg="rosbag" type="play" name="player" output="screen" args="--clock -r 0.1 -s 100 -q $(arg pc_bag_file)"/>
   
   
   <?ignore
@@ -41,8 +41,8 @@
     <param name="distribution_enabled" type="bool" value="true" />
     <param name="static_frame"  type="string" value="/map" />
     <param name="body_frame"  type="string" value="/body" />
-    <param name="stacking_visualization_enabled" type="bool" value="false" />
-    <param name="path_visualization_enabled" type="bool" value="false" />
+    <param name="stacking_visualization_enabled" type="bool" value="true" />
+    <param name="path_visualization_enabled" type="bool" value="true" />
     <param name="save_pcd_enabled" type="bool" value="true" />
     <param name="octomap_enabled" type="bool" value="false"/>
     
