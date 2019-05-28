@@ -3,7 +3,8 @@ project(segmentation_projection)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
-
+SET(CMAKE_BUILD_TYPE Debug)
+  
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -33,6 +34,7 @@ find_package(Eigen3 REQUIRED)
 find_package(octomap REQUIRED)
 include_directories(${OCTOMAP_INCLUDE_DIRS})
 link_directories(${OCTOMAP_LIBRARY_DIRS})
+message(${OCTOMAP_INCLUDE_DIRS})
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -137,6 +139,7 @@ include_directories(
 ${catkin_INCLUDE_DIRS}
 ${PCL_INCLUDE_DIRS}
 ${EIGEN3_INCLUDE_DIRS}
+${OCTOMAP_INCLUDE_DIRS}
 )
 
 
@@ -155,6 +158,7 @@ ${EIGEN3_INCLUDE_DIRS}
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(labeled_pc_map_node src/labeled_pc_map_node.cpp)
+add_executable(nclt_map_node      src/rvsm_nclt_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -168,6 +172,12 @@ add_executable(labeled_pc_map_node src/labeled_pc_map_node.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(labeled_pc_map_node
+  ${catkin_LIBRARIES}
+  ${PCL_COMMON_LIBRARIES}
+  ${PCL_IO_LIBRARIES}
+  ${OCTOMAP_LIBRARIES}
+)
+target_link_libraries(nclt_map_node
   ${catkin_LIBRARIES}
   ${PCL_COMMON_LIBRARIES}
   ${PCL_IO_LIBRARIES}

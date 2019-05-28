@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+
+<launch>
+  <param name="use_sim_time" value="true"/>
+
+  <!--<node pkg="tf" type="static_transform_publisher" name="map" 
+        args="0.0 0.0 0.0 0 0 0 1 map body 100" /> -->
+  
+ <!-- <arg name="pc_bag_file" default="/home/biped/seagate/bagfiles/2019-03-21/nclt_04_29_labeled_pc_tf.bag" /> -->
+
+  <!--<arg name="pc_bag_file" default="/home/biped/seagate/bagfiles/2019-03-12/2019-03-21-23-41-42.bag /home/biped/seagate/bagfiles/2019-03-12/nclt_gt_filtered.bag" /> -->
+
+  <arg name="seg_pcds_folder" default="$(find segmentation_projection)/data/nclt_04_29/seg_pcds/" />
+  <arg name="pose_sequence_file" default="$(find segmentation_projection)/data/nclt_04_29/pose_seqs.txt" />
+ 
+
+  <?ignore <node pkg="rosbag" type="play" name="player" output="screen" args="--clock -r 0.1 -s 100 -q $(arg pc_bag_file)"/> --> ?>
+  
+  <!-- Visualize in rviz -->
+  <!-- <node pkg="rviz" type="rviz" name="rviz"  /> -->
+
+  <!-- Painting point cloud -->
+  <node pkg="segmentation_projection" type="nclt_map_node" name="nclt_map_node" args="$(arg seg_pcds_folder) $(arg pose_sequence_file)"  output="screen" launch-prefix="gdb -ex run --args" >
+  
+    <remap from="~cloud_in" to="/labeled_pointcloud" />
+    <remap from="~cloud_out" to="/labeled_pointcloud_pc2" />
+
+    <param name="painting_enabled" type="bool" value="true" />
+    <param name="distribution_enabled" type="bool" value="true" />
+    <param name="static_frame"  type="string" value="/map" />
+    <param name="body_frame"  type="string" value="/body" />
+    <param name="stacking_visualization_enabled" type="bool" value="false" />
+    <param name="path_visualization_enabled" type="bool" value="true" />
+    <param name="save_pcd_enabled" type="bool" value="false" />
+    
+    <param name="octomap_enabled" type="bool" value="true"/>
+    <param name="octomap_num_frames" type="int" value="450" />
+    <param name="octomap_max_dist" type="int" value="15" />
+    <param name="octomap_resolution" type="double" value="0.1" />
+    <param name="octomap_prob_hit" type="double" value="0.53" />
+    <param name="octomap_prob_miss" type="double" value="0.3" />
+    <param name="octomap_occupy_thresh" type="double" value="0.52" />
+
+  </node>
+
+</launch>
