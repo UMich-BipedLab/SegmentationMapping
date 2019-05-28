@@ -8,6 +8,8 @@
 
 
 #include "labeled_pc_map.hpp"
+#include "PointSegmentedDistribution.hpp"
+
 #include <ros/console.h>
 #include <iostream>
 
@@ -28,7 +30,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(pcl::PointSegmentedDistribution<14>,
 int main(int argc, char ** argv){
 
   ros::init(argc, argv, "labeled_pc_map_node");
-
+  //ros::NodeHandle nh("~");
   ROS_INFO("nclt 14-class pc_painter init....");
   segmentation_projection::PointCloudPainter<14> painter;
 

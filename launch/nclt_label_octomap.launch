@@ -4,7 +4,7 @@
   <param name="use_sim_time" value="true"/>
   <arg name="pc_bag_file" default="/home/biped/seagate/bagfiles/2019-03-21/nclt_04_29_labeled_pc_tf.bag" />
   <!-- Visualize in rviz -->
-  <node pkg="rviz" type="rviz" name="rviz"  />
+  <!-- <node pkg="rviz" type="rviz" name="rviz"  /> -->
   <node pkg="rosbag" type="play" name="player" output="screen" args="--clock -r 0.3 -q $(arg pc_bag_file)"/>
   
   <!-- Painting point cloud -->
