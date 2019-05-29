@@ -29,6 +29,8 @@
 #include <string>
 #include <fstream>
 #include <memory>
+#include <unordered_map>
+#include <tuple>
 #include <boost/make_shared.hpp>
 
 #include <eigen_conversions/eigen_msg.h>
@@ -106,9 +108,31 @@ namespace segmentation_projection {
         pnh.getParam("octomap_prob_miss", prob_miss);
         octree_ptr_->setProbHit(prob_hit);
         octree_ptr_->setProbMiss(prob_miss);
+        
+
+        // create label map
+        label2color[2]  =std::make_tuple(128, 64, 128  );
+        label2color[3]  =std::make_tuple(128, 64,128   );
+        label2color[5]  =std::make_tuple( 192, 192, 192);
+        label2color[10] =std::make_tuple(192,192,192   );
+        label2color[12] =std::make_tuple(255,255,0     );
+        label2color[6]  =std::make_tuple(107,142, 35   );
+        label2color[4]  =std::make_tuple(107,142, 35   );
+        label2color[0]  =std::make_tuple( 135, 206,235 );
+        label2color[1]  =std::make_tuple(  30, 144,255 );
+        label2color[8]  =std::make_tuple(220, 20, 60   );
+        label2color[7]  =std::make_tuple( 0, 0,142     );
+        label2color[9]  =std::make_tuple(119, 11, 32   );
+        label2color[11] =std::make_tuple(123, 104, 238 );
+
+        octree_ptr_->addColorMap(label2color);
+
       }
       
       ROS_INFO("ros_pc_map init finish\n");
+
+
+      
 
       pose_file_.open("pose_sequence.txt");
       
@@ -158,6 +182,7 @@ namespace segmentation_projection {
     int octomap_num_frames_;
     ros::Publisher octomap_publisher_;
     float octomap_max_dist_;
+    std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
     void add_pc_to_octomap(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc_rgb,
                            const Eigen::Affine3d & T_eigen ,
                            bool is_update_occupancy,
@@ -234,7 +259,7 @@ namespace segmentation_projection {
       octomap::SemanticOcTreeNode * result = octree_ptr_->search(endpoint);
       
       std::vector<float> label_dist(p.label_distribution, std::end(p.label_distribution));
-      octree_ptr_->averageNodeColor(result, r, g, b);
+      //octree_ptr_->averageNodeColor(result, r, g, b);
       octree_ptr_->averageNodeSemantics(result, label_dist );
 
       //octree_ptr_->averageNodeColor( x,  y,  z, r, g, b);
