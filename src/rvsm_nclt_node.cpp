@@ -42,13 +42,37 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(pcl::PointSegmentedDistribution<14>,
 
 
 void line2vector(std::string & input_line, std::vector<std::string>& tokens) {
-    std::stringstream ss( input_line );
+  std::stringstream ss( input_line );
 
-    while( ss.good() ) {
-        std::string substr;
-        std::getline( ss, substr, ',' );
-        tokens.push_back( substr );
-    }
+  while( ss.good() ) {
+    std::string substr;
+    std::getline( ss, substr, ',' );
+    tokens.push_back( substr );
+  }
+}
+
+template <unsigned int NUM_CLASS>
+typename pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>::Ptr
+read_seg_pcd_text(const std::string & file_name) {
+  // write to a pcd file
+  typename pcl::PointCloud<pcl::PointSegmentedDistribution<14>>::Ptr in_cloud(new typename  pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>);
+  std::ifstream infile(file_name);
+  typename pcl::PointSegmentedDistribution<NUM_CLASS> point;
+  float rf;
+  float gf;
+  float bf;
+  while(!infile.eof()) {
+    infile >> point.x >> point.y >> point.z >> rf >> gf >> bf >> point.label;
+    for (int j = 0 ;j < NUM_CLASS; j++) 
+      infile >> point.label_distribution[j];
+    uint8_t r = int(rf*255), g = int(gf*255), b = int(bf*255);
+    // Example: Red color
+    //std::cout << (int)r << " " <<(int) g << " " <<(int) b <<std::endl;
+    uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+    point.rgb = *reinterpret_cast<float*>(&rgb);
+    in_cloud->push_back(point);
+  }
+  return in_cloud;
 }
 
 
@@ -74,8 +98,8 @@ int main(int argc, char ** argv){
       continue;
     }
 
-    pcl::PointCloud<pcl::PointSegmentedDistribution<14>> pc;
-    pcl::io::loadPCDFile<pcl::PointSegmentedDistribution<14>> (file, pc);    
+    pcl::PointCloud<pcl::PointSegmentedDistribution<14>>::Ptr pc(new pcl::PointCloud<pcl::PointSegmentedDistribution<14>>);
+    pcl::io::loadPCDFile<pcl::PointSegmentedDistribution<14>> (file, *pc);    
 
     Eigen::Matrix4d T;
     T.setIdentity();
@@ -87,11 +111,11 @@ int main(int argc, char ** argv){
       }
     }
     Eigen::Affine3d aff(T.matrix());
-    std::cout<<"Process "<<pc.size()<<" labeled points at time "<< pose_time<<std::endl;
+    std::cout<<"Process "<<pc->size()<<" labeled points at time "<< pose_time<<std::endl;
     std::cout<<T<<std::endl;
 
                   
-    painter.FuseMapIncremental(pc, aff, ((double)pose_time) / 1e9);
+    painter.FuseMapIncremental(*pc, aff, ((double)pose_time) / 1e9);
     
   }
 

@@ -58,6 +58,7 @@ namespace segmentation_projection {
   public:
     PointCloudPainter()
       : nh()
+      , pnh("~")  
         //, painting_enabled_(true)
       , distribution_enabled_(false)
       , save_pcd_enabled_(false)
@@ -68,7 +69,7 @@ namespace segmentation_projection {
       , pointcloud_seg_stacked_ptr_(new typename pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>)
       , path_visualization_enabled_(true)
       , octomap_enabled_(false)
-      , octree_ptr_(new octomap::SemanticOcTree(0.1))
+      , octomap_resolution_(0.1)
         //, octree_ptr_(new octomap::ColorOcTree(0.1))
       , octomap_frame_counter_(0)
       , octomap_num_frames_(200)
@@ -86,7 +87,7 @@ namespace segmentation_projection {
       pnh.getParam("octomap_enabled", octomap_enabled_);
       pnh.getParam("octomap_num_frames", octomap_num_frames_);
       pnh.getParam("octomap_max_dist", octomap_max_dist_);
-      
+      pnh.getParam("octomap_resolution", octomap_resolution_);
 
       this->pc_subscriber_ = pnh.subscribe("cloud_in", 100, &PointCloudPainter::PointCloudCallback, this);
 
@@ -101,6 +102,26 @@ namespace segmentation_projection {
       }
 
       if (octomap_enabled_) {
+        // create label map
+        label2color[2]  =std::make_tuple(250, 250, 250 ); // road
+        label2color[3]  =std::make_tuple(128, 64,  128 ); // sidewalk
+        label2color[5]  =std::make_tuple(250, 128, 0   ); // building
+        label2color[10] =std::make_tuple(192, 192, 192 ); // pole
+        label2color[12] =std::make_tuple(250, 250, 0   ); // sign
+        label2color[6]  =std::make_tuple(0  , 100, 0   ); // vegetation
+        label2color[4]  =std::make_tuple(128, 128, 0   ); // terrain
+        label2color[13] =std::make_tuple(135, 206, 235 ); // sky
+        label2color[1]  =std::make_tuple( 30, 144, 250 ); // water
+        label2color[8]  =std::make_tuple(220, 20,  60  ); // person
+        label2color[7]  =std::make_tuple( 0, 0,142     ); // car
+        label2color[9]  =std::make_tuple(119, 11, 32   ); // bike
+        label2color[11] =std::make_tuple(123, 104, 238 ); // stair
+        label2color[0]  =std::make_tuple(255, 255, 255 ); // background
+
+
+        octree_ptr_ = std::make_shared<octomap::SemanticOcTree>(octomap::SemanticOcTree(octomap_resolution_,
+                                                                   NUM_CLASS,
+                                                                   label2color));
         octomap_publisher_ = pnh.advertise<octomap_msgs::Octomap>("octomap_out", 10);
         octree_ptr_->setOccupancyThres(0.52);
         double prob_hit = 0.5, prob_miss = 0.5;
@@ -110,22 +131,7 @@ namespace segmentation_projection {
         octree_ptr_->setProbMiss(prob_miss);
         
 
-        // create label map
-        label2color[2]  =std::make_tuple(128, 64, 128  );
-        label2color[3]  =std::make_tuple(128, 64,128   );
-        label2color[5]  =std::make_tuple( 192, 192, 192);
-        label2color[10] =std::make_tuple(192,192,192   );
-        label2color[12] =std::make_tuple(255,255,0     );
-        label2color[6]  =std::make_tuple(107,142, 35   );
-        label2color[4]  =std::make_tuple(107,142, 35   );
-        label2color[0]  =std::make_tuple( 135, 206,235 );
-        label2color[1]  =std::make_tuple(  30, 144,255 );
-        label2color[8]  =std::make_tuple(220, 20, 60   );
-        label2color[7]  =std::make_tuple( 0, 0,142     );
-        label2color[9]  =std::make_tuple(119, 11, 32   );
-        label2color[11] =std::make_tuple(123, 104, 238 );
 
-        octree_ptr_->addColorMap(label2color);
 
       }
       
@@ -144,7 +150,7 @@ namespace segmentation_projection {
 
   
   private:
-    ros::NodeHandle nh;
+    ros::NodeHandle nh, pnh;
     ros::Subscriber pc_subscriber_;
     ros::Publisher pc_publisher_;
     tf::TransformListener listener_;
@@ -180,6 +186,7 @@ namespace segmentation_projection {
     //std::shared_ptr<octomap::ColorOcTree> octree_ptr_;
     int octomap_frame_counter_;
     int octomap_num_frames_;
+    double octomap_resolution_;
     ros::Publisher octomap_publisher_;
     float octomap_max_dist_;
     std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
@@ -253,12 +260,19 @@ namespace segmentation_projection {
       float y = p.y;
       float z = p.z; // for NCLT only
       octomap::point3d endpoint ( x,  y, z);
+
       if (is_update_occupancy)
         octree_ptr_->updateNode(endpoint, true); // integrate 'occupied' measurement
       
       octomap::SemanticOcTreeNode * result = octree_ptr_->search(endpoint);
-      
       std::vector<float> label_dist(p.label_distribution, std::end(p.label_distribution));
+      if (i == 0) {
+        std::cout<<"Before recurrent tree update, @ "<<x<<", "<<y << ", "<<z<<" the distribution is  ";
+        for (auto && d : result->getSemantics().label) {
+          std::cout<<d<<" ";
+        }
+        std::cout<<"\n";
+      }
       //octree_ptr_->averageNodeColor(result, r, g, b);
       octree_ptr_->averageNodeSemantics(result, label_dist );
 
@@ -268,7 +282,8 @@ namespace segmentation_projection {
 
     if (is_update_occupancy)
       octree_ptr_->updateInnerOccupancy();
-
+    
+    
     if (centroids_file_name.size() > 0) {
       std::ofstream centroids_file(centroids_file_name);
       
@@ -283,7 +298,24 @@ namespace segmentation_projection {
       centroids_file.close();
                                        
     }
-      
+
+    // for debugging
+    for (int i = 0; i < 1; i++  ) {
+      pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
+
+      float x = p.x;
+      float y = p.y;
+      float z = p.z; // for NCLT only
+      octomap::point3d endpoint ( x,  y, z);
+
+      octomap::SemanticOcTreeNode * result = octree_ptr_->search(endpoint);
+
+      std::cout<<"After recurrent tree update, @ "<<x<<", "<<y << ", "<<z<<" the distribution is  ";
+      for (auto && d : result->getSemantics().label) {
+        std::cout<<d<<" ";
+      }
+      std::cout<<"\n";
+    }
 
     std::cout<<"publishing octree\n";
     octomap_msgs::Octomap bmap_msg;
