@@ -10,6 +10,7 @@
 
   <!--<arg name="pc_bag_file" default="/home/biped/seagate/bagfiles/2019-03-12/2019-03-21-23-41-42.bag /home/biped/seagate/bagfiles/2019-03-12/nclt_gt_filtered.bag" /> -->
 
+  <!-- <arg name="seg_pcds_folder" default="$(find segmentation_projection)/data/nclt_04_29/rvm_segmented_txt/" />-->
   <arg name="seg_pcds_folder" default="$(find segmentation_projection)/data/nclt_04_29/seg_pcds/" />
   <arg name="pose_sequence_file" default="$(find segmentation_projection)/data/nclt_04_29/pose_sequence.txt" />
  

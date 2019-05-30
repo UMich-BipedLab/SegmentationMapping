@@ -98,6 +98,7 @@ int main(int argc, char ** argv){
       continue;
     }
 
+    //pcl::PointCloud<pcl::PointSegmentedDistribution<14>>::Ptr pc = read_seg_pcd_text<14>(file);
     pcl::PointCloud<pcl::PointSegmentedDistribution<14>>::Ptr pc(new pcl::PointCloud<pcl::PointSegmentedDistribution<14>>);
     pcl::io::loadPCDFile<pcl::PointSegmentedDistribution<14>> (file, *pc);    
 

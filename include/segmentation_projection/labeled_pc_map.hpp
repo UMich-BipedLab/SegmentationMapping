@@ -268,10 +268,7 @@ namespace segmentation_projection {
       std::vector<float> label_dist(p.label_distribution, std::end(p.label_distribution));
       if (i == 0) {
         std::cout<<"Before recurrent tree update, @ "<<x<<", "<<y << ", "<<z<<" the distribution is  ";
-        for (auto && d : result->getSemantics().label) {
-          std::cout<<d<<" ";
-        }
-        std::cout<<"\n";
+        std::cout<< result->getSemantics()<<"\n";
       }
       //octree_ptr_->averageNodeColor(result, r, g, b);
       octree_ptr_->averageNodeSemantics(result, label_dist );
