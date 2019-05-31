@@ -147,6 +147,7 @@ namespace segmentation_projection {
 
     void PointCloudCallback(const sensor_msgs::PointCloudConstPtr& cloud_msg);
     void FuseMapIncremental(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc, const Eigen::Affine3d & pose_at_pc, double stamp);
+    const std::shared_ptr<octomap::SemanticOcTree> get_octree_ptr() const { return octree_ptr_; }
 
   
   private:

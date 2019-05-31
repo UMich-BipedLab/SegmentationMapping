@@ -53,10 +53,8 @@ void QueryPointCloudSemantics(
       SemanticOcTreeNode* node = tree->search(query);
       if (node != NULL && node->getOccupancy() > 0.5 && node->isSemanticsSet()) {
           //PrintQueryInfo(query, node);
-          std::cout << "11111" << std::endl;
           std::cout << node->isSemanticsSet() << std::endl;
           auto semantics = node->getSemantics();
-          std::cout << "2222" << std::endl;
           std::cout << semantics.label.size() << std::endl;
           data_out << pc->points[j].x << " "
                    << pc->points[j].y << " "
@@ -136,21 +134,21 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr read_nclt_pc_file(const std::string & filena
 int main(int argc, char** argv) {
 
   // Read semantic octree from tree file
-  std::string tree_file = "/home/ganlu/Datasets/nclt/prior_octree_with_distribution.ot";
+  std::string tree_file = "/home/biped/.ros/prior_octree_with_distribution.ot";
   std::cout << "Read semantic tree from " << tree_file << "\n";
   AbstractOcTree* read_tree = AbstractOcTree::read(tree_file);
   SemanticOcTree* read_semantic_tree = dynamic_cast<SemanticOcTree*> (read_tree);
 
   // Read pc poses
-  std::string pose_file = "/home/ganlu/Datasets/nclt/pose_sequence.txt";
+  std::string pose_file = "/home/biped/perl_code/workspace/src/segmentation_projection/data/nclt_04_29/pose_sequence.txt";
   std::unordered_map<uint64_t, std::vector<double>> time2pose = ReadPointCloudPoses(pose_file);
   std::cout << "Read poses size: " << time2pose.size() << std::endl;
 
   // Read gt times
-  std::string time_file = "/home/ganlu/Datasets/nclt/gt_times.txt";
+  std::string time_file = "/home/biped/perl_code/rvsm/nclt_may23_gt/gt_times.txt";
   std::ifstream time_in(time_file);
   std::string time_line;
-  std::string seq_path("/home/ganlu/Datasets/nclt/rvm_04_29/");
+  std::string seq_path("/home/biped//perl_code/gicp/visualization/data/rvm_04_29/");
   
   while (std::getline(time_in, time_line)) {
     std::stringstream ss(time_line);

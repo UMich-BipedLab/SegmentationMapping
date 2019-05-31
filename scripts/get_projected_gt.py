@@ -27,6 +27,7 @@ def gt_viewer(lidar_final, labels_final):
 
     v = True
     while v:
+        count += 1
         v=not(visual.WasStopped())
 
 def gt_projection(lidar, lidar_distribution,
@@ -85,7 +86,7 @@ def gt_projection(lidar, lidar_distribution,
 	#original_rgb.append(rgb_img[int(v), int(u), :])
         projected_index.append(col)
     gt_label_file.close()
-    print("Finish writing to "+output_file)
+    print("Finish writing to {}, # of final points is {}".format(output_file, len(projected_index)))
 
     lidars_left = lidar_on_img[:, projected_index]
     distribution_left = filtered_distribution[:, projected_index]
@@ -93,9 +94,9 @@ def gt_projection(lidar, lidar_distribution,
     # for debug use: visualize the projection on the original rgb image
     #######################################################################
     img_to_vis = np.zeros((gt_img.shape[0], gt_img.shape[1], 3))
-    img_to_vis[:,:,0] = gt_img
-    img_to_vis[:,:,1] = gt_img
-    img_to_vis[:,:,2] = gt_img
+    img_to_vis[:,:,0] = gt_img * 10
+    img_to_vis[:,:,1] = gt_img * 10
+    img_to_vis[:,:,2] = gt_img * 10
     for j in range(len(projected_index)):
         col = projected_index[j]
         u = int(round(projected_lidar_2d[0, col] , 0))
@@ -106,7 +107,7 @@ def gt_projection(lidar, lidar_distribution,
         else:
             color = label_to_color[0]
 
-        cv2.circle(img_to_vis, (u, v),2, color)
+        cv2.circle(img_to_vis, (u, v),2, color )
     cv2.imshow("gt projection", img_to_vis)
     cv2.waitKey(1000)
     ########################################################################
@@ -140,21 +141,37 @@ def batch_gt_projection_nclt(query_lidar_folder,
     distortions    = []
     intrinsic      = []
     for i in range(5):
-        cam2lidar_mats.append(np.load("{}/cam2lidar_{}.npy".format(config_folder, i+1)))
-        intrinsic.append("{}/nclt_intrinsic_{}.npy".format(config_folder, i+1))
-        distortions.append(DistortMap("{}/U2D_Cam{}_1616X1232.txt".format(config, i+1)))
-    
+        print("extrinsic {}/cam2lidar_{}.npy".format(config_folder, i+1))
+        extrinsic = np.load("{}/cam2lidar_{}.npy".format(config_folder, i+1))
+        cam2lidar_mats.append(extrinsic)
+        print(cam2lidar_mats[-1])
+        print("intrinsic")
+        intrinsic.append(np.load("{}/nclt_intrinsic_{}.npy".format(config_folder, i+1)))
+
+        print(intrinsic[-1])
+        print("read camera distortion")
+        distortions.append(DistortMap("{}/U2D_Cam{}_1616X1232.txt".format(config_folder, i+1)))
+
+    ind = 0
     for query_file in sorted(os.listdir(gt_folder)):
 
         camera_prefix = query_file[:4]
         camera_ind = int(camera_prefix[-1])
+
+        if camera_ind == 1 or camera_ind == 4:
+            continue
+        
         camera_i_list = camera_ind - 1
         time = query_file[5:-4]
-        print("Processing "+query_file+", time is "+time)
+        print("Processing "+query_file+", time is "+time, " index is "+str(ind))
+        ind += 1
         
         lidar, lidar_distribution = read_input_pc_with_distribution( query_lidar_folder + "/" + time + ".txt" )
 
-        gt = cv2.imread( gt_folder + "/" + query_file )[:,:,0]
+        gt = cv2.imread( gt_folder + "/" + query_file )
+        cv2.imshow(gt)
+        cv2.waitKey(500)
+        gt = gt[:, :, 0]
         print(lidar.shape, lidar_distribution.shape, gt.shape)
         lidars_left, labels, distribution_left = gt_projection(lidar,
                                                                lidar_distribution,
@@ -162,7 +179,7 @@ def batch_gt_projection_nclt(query_lidar_folder,
                                                                gt,
                                                                cam2lidar_mats[camera_i_list],
                                                                intrinsic[camera_i_list],
-                                                               distort[camera_i_list],
+                                                               distortions[camera_i_list],
                                                                output_folder+"/"+camera_prefix + "_"+ time+".txt" )
         
         gt_viewer(lidars_left, labels)
@@ -178,8 +195,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
 
-    batch_gt_projection_nclt(args.segmented_lidar_folder,
+    batch_gt_projection_nclt(args.segmented_lidar_folder[0],
                              args.rgb_img_shape,
-                             args.gt_folder,
-                             args.config_folder,
-                             args.output_folder)
+                             args.gt_folder[0],
+                             args.config_folder[0],
+                             args.output_folder[0])
