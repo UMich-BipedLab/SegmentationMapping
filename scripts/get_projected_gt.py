@@ -20,18 +20,17 @@ def gt_viewer(lidar_final, labels_final):
         else:
             color = label_to_color[0]
         
-        lidar[i][3] = color[2] << 16 | color[1] << 8 | color[0]
+        lidar[i][3] = color[0] << 16 | color[1] << 8 | color[2]
     cloud.from_array(lidar)
     visual = pcl_visualization.CloudViewing()
     visual.ShowColorCloud(cloud)
 
     v = True
     while v:
-        count += 1
         v=not(visual.WasStopped())
 
 def gt_projection(lidar, lidar_distribution,
-                  rgb_img_shape, gt_img, cam2lidar, intrinsic, distort_map, output_file):
+                  rgb_img, gt_img, cam2lidar, intrinsic, distort_map, output_file):
 
     num_classes = lidar_distribution.shape[0]
     
@@ -65,8 +64,8 @@ def gt_projection(lidar, lidar_distribution,
     gt_label_file = open(output_file, 'w')
     for col in range(projected_lidar_2d.shape[1]):
         u, v, _ = projected_lidar_2d[:, col]
-        u ,v = get_cropped_uv_rotated(u, v, rgb_img_shape[1] * 1.0 / 1200 )
-        if is_out_of_bound(u, v, rgb_img_shape[1], rgb_img_shape[0]):
+        u ,v = get_cropped_uv_rotated(u, v, rgb_img.shape[1] * 1.0 / 1200 )
+        if is_out_of_bound(u, v, rgb_img.shape[1], rgb_img.shape[0]):
             continue
         projected_points.append(lidar_on_img[:, col])
 
@@ -93,23 +92,19 @@ def gt_projection(lidar, lidar_distribution,
     #######################################################################
     # for debug use: visualize the projection on the original rgb image
     #######################################################################
-    img_to_vis = np.zeros((gt_img.shape[0], gt_img.shape[1], 3))
-    img_to_vis[:,:,0] = gt_img * 10
-    img_to_vis[:,:,1] = gt_img * 10
-    img_to_vis[:,:,2] = gt_img * 10
     for j in range(len(projected_index)):
         col = projected_index[j]
         u = int(round(projected_lidar_2d[0, col] , 0))
         v = int(round(projected_lidar_2d[1, col] , 0))
-        u ,v = get_cropped_uv_rotated(u, v, rgb_img_shape[1] * 1.0 / 1200 )
+        u ,v = get_cropped_uv_rotated(u, v, rgb_img.shape[1] * 1.0 / 1200 )
         if labels[j] in label_to_color:
             color = label_to_color[labels[j]]
         else:
             color = label_to_color[0]
 
-        cv2.circle(img_to_vis, (u, v),2, color )
-    cv2.imshow("gt projection", img_to_vis)
-    cv2.waitKey(1000)
+        cv2.circle(rgb_img, (u, v),2, color )
+    cv2.imshow("gt projection", rgb_img)
+    cv2.waitKey(500)
     ########################################################################
     return lidars_left, labels, distribution_left
 
@@ -133,9 +128,9 @@ def read_input_pc_with_distribution(file_name):
 
 
 def batch_gt_projection_nclt(query_lidar_folder,
-                             raw_rgb_img_shape,
                              gt_folder,
                              config_folder,
+                             rgb_folder,
                              output_folder):
     cam2lidar_mats = []
     distortions    = []
@@ -160,29 +155,30 @@ def batch_gt_projection_nclt(query_lidar_folder,
 
         if camera_ind == 1 or camera_ind == 4:
             continue
-        
+        ind += 1
         camera_i_list = camera_ind - 1
         time = query_file[5:-4]
-        print("Processing "+query_file+", time is "+time, " index is "+str(ind))
-        ind += 1
+        print("Processing "+query_file+", time is "+time, " frame counter is "+str(ind))
         
         lidar, lidar_distribution = read_input_pc_with_distribution( query_lidar_folder + "/" + time + ".txt" )
 
         gt = cv2.imread( gt_folder + "/" + query_file )
-        cv2.imshow(gt)
-        cv2.waitKey(500)
         gt = gt[:, :, 0]
         print(lidar.shape, lidar_distribution.shape, gt.shape)
+        #cv2.imshow("gt", gt)
+        #cv2.waitKey(500)
+        rgb_img = cv2.imread( rgb_folder + "/" + query_file[:-4] + ".png")
+
         lidars_left, labels, distribution_left = gt_projection(lidar,
                                                                lidar_distribution,
-                                                               raw_rgb_img_shape,
+                                                               rgb_img,
                                                                gt,
                                                                cam2lidar_mats[camera_i_list],
                                                                intrinsic[camera_i_list],
                                                                distortions[camera_i_list],
                                                                output_folder+"/"+camera_prefix + "_"+ time+".txt" )
         
-        gt_viewer(lidars_left, labels)
+        #gt_viewer(lidars_left, labels)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process some integers.')
@@ -190,13 +186,15 @@ if __name__ == "__main__":
     parser.add_argument('--gt_folder', type=str, nargs=1)
     parser.add_argument('--config_folder', type=str, nargs=1)
     parser.add_argument('--output_folder', type=str, nargs=1)
-    parser.add_argument('--rgb_img_shape', type=int, nargs=2)
+    parser.add_argument('--rgb_img_folder', type=str, nargs=1)
+    #parser.add_argument('--rgb_img_shape', type=int, nargs=2)
 
     args = parser.parse_args()
 
 
     batch_gt_projection_nclt(args.segmented_lidar_folder[0],
-                             args.rgb_img_shape,
+                             #args.rgb_img_shape,
                              args.gt_folder[0],
                              args.config_folder[0],
+                             args.rgb_img_folder[0],
                              args.output_folder[0])
