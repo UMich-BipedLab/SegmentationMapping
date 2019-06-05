@@ -160,6 +160,7 @@ ${OCTOMAP_INCLUDE_DIRS}
 add_executable(labeled_pc_map_node src/labeled_pc_map_node.cpp)
 add_executable(nclt_map_node      src/rvsm_nclt_node.cpp)
 add_executable(query_semantic_tree src/query_semantic_tree.cpp)
+add_executable(stereo_segmentation_node src/stereo_segmentation_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -189,6 +190,9 @@ target_link_libraries(query_semantic_tree
   ${PCL_COMMON_LIBRARIES}
   ${PCL_IO_LIBRARIES}
   ${OCTOMAP_LIBRARIES}
+)
+target_link_libraries(stereo_segmentation_node
+  ${catkin_LIBRARIES}
 )
 
 #############
