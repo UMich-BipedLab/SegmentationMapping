@@ -130,15 +130,9 @@ namespace segmentation_projection {
         octree_ptr_->setProbHit(prob_hit);
         octree_ptr_->setProbMiss(prob_miss);
         
-
-
-
       }
       
       ROS_INFO("ros_pc_map init finish\n");
-
-
-      
 
       pose_file_.open("pose_sequence.txt");
       
@@ -146,7 +140,7 @@ namespace segmentation_projection {
     }
 
     void PointCloudCallback(const sensor_msgs::PointCloudConstPtr& cloud_msg);
-    void FuseMapIncremental(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc, const Eigen::Affine3d & pose_at_pc, double stamp);
+    void FuseMapIncremental(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc, const Eigen::Affine3d & pose_at_pc, double stamp, bool is_write_centroids);
     const std::shared_ptr<octomap::SemanticOcTree> get_octree_ptr() const { return octree_ptr_; }
 
   
@@ -194,7 +188,7 @@ namespace segmentation_projection {
     void add_pc_to_octomap(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc_rgb,
                            const Eigen::Affine3d & T_eigen ,
                            bool is_update_occupancy,
-                           std::string centroids_file_name,
+                           bool is_write_centroids,
                            const ros::Time & stamp);
   };
   
@@ -243,7 +237,7 @@ namespace segmentation_projection {
   PointCloudPainter<NUM_CLASS>::add_pc_to_octomap(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc_rgb,
                                                   const Eigen::Affine3d & T_map2body_eigen,
                                                   bool is_update_occupancy,
-                                                  std::string centroids_file_name,
+                                                  bool is_write_centroids,
                                                   const ros::Time & stamp) {
 
     pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> transformed_pc;
@@ -282,8 +276,9 @@ namespace segmentation_projection {
       octree_ptr_->updateInnerOccupancy();
     
     
-    if (centroids_file_name.size() > 0) {
-      std::ofstream centroids_file(centroids_file_name);
+    if (is_write_centroids) {
+      uint64_t get_usec = (uint64_t)stamp.toNSec() / 1000;
+      std::ofstream centroids_file("octree_centroids/" + std::to_string(get_usec) + ".txt");
       
       for (octomap::SemanticOcTree::leaf_iterator it = octree_ptr_->begin_leafs(),
              //for (octomap::ColorOcTree::leaf_iterator it = octree_ptr_->begin_leafs(),
@@ -329,7 +324,8 @@ namespace segmentation_projection {
   template <unsigned int NUM_CLASS>
   inline void
   PointCloudPainter<NUM_CLASS>::FuseMapIncremental(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc,
-                                                   const Eigen::Affine3d & pose_at_pc, double stamp){
+                                                   const Eigen::Affine3d & pose_at_pc, double stamp,
+                                                   bool is_write_centroids){
     
     ros::Time t(stamp);
     if (path_visualization_enabled_) {
@@ -339,12 +335,25 @@ namespace segmentation_projection {
       add_pose_to_path(pose_at_pc, header);
     }
 
-    if (octomap_enabled_) {
-      add_pc_to_octomap(pc , pose_at_pc, true,"", t );
+    if (octomap_enabled_ && distribution_enabled_) {
+      add_pc_to_octomap(pc , pose_at_pc, true, is_write_centroids, t );
       this->octomap_frame_counter_++;
-      if (this->octomap_frame_counter_ == this->octomap_num_frames_) {
+      //if (this->octomap_frame_counter_ > this->octomap_num_frames_) {
         octree_ptr_->write("semantic_octree.ot");
-      }
+        //}
+
+    }
+
+    if (stacking_visualization_enabled_ && distribution_enabled_) {
+      std_msgs::Header header;
+      header.stamp = t;
+      header.frame_id = this->static_frame_;
+      pcl_conversions::toPCL(header, pointcloud_seg_stacked_ptr_->header);
+      pointcloud_seg_stacked_ptr_->header.frame_id = this->static_frame_;
+      merge_new_pc_to_voxel_grids<pcl::PointSegmentedDistribution<NUM_CLASS>>(pc,
+                                                                              *pointcloud_seg_stacked_ptr_,
+                                                                              pose_at_pc);
+      pcl::io::savePCDFile ("segmented_pcd_stacked/stacked_pc_distribution.pcd", *pointcloud_seg_stacked_ptr_);
 
     }
 

@@ -61,11 +61,13 @@ void QueryPointCloudSemantics(const std::shared_ptr< SemanticOcTree> tree,
   std::cout << txt_file << std::endl;
   std::ofstream data_out(txt_file);
 
-  std::cout << "Performing some queries ... # of points is "<<pc->size() << std::endl;
+  std::cout << "Performing some queries ... # of points is "<<pc->size()<<", writing to " << txt_file<<std::endl;
+  int count = 0;
   for (int j = 0; j < pc->points.size(); ++j) {
     point3d query (pc->points[j].x, pc->points[j].y, pc->points[j].z);
     const SemanticOcTreeNode* node = tree->search(query);
-    if (node != NULL && node->getOccupancy() > 0.5 && node->isSemanticsSet()) {
+    if (node != NULL && node->getOccupancy() > 0.35 && node->isSemanticsSet()) {
+      count += 1;
       //PrintQueryInfo(query, node);
       auto semantics = node->getSemantics();
       data_out << pc_local->points[j].x << " "
@@ -78,6 +80,7 @@ void QueryPointCloudSemantics(const std::shared_ptr< SemanticOcTree> tree,
     } else
       continue;
   }
+  std::cout<<"Count is "<<count<<std::endl;
   data_out.close();
 }
 
@@ -91,7 +94,7 @@ std::unordered_map<uint64_t, std::vector<double>> ReadPointCloudPoses(std::strin
     std::stringstream ss(pose_line);
     uint64_t t;
     ss >> t;
-    uint64_t time = (uint64_t) (std::round((double)t / 1000.0) + 0.1);
+    uint64_t time = t;  // (uint64_t) (std::round((double)t / 1000.0) + 0.1);
     
     std::vector<double> pose;
     for (int i = 0; i < 12; ++i) {
@@ -157,22 +160,26 @@ template <unsigned int NUM_CLASS>
 typename pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>::Ptr
 read_seg_pcd_text(const std::string & file_name) {
   // write to a pcd file
-  typename pcl::PointCloud<pcl::PointSegmentedDistribution<14>>::Ptr in_cloud(new typename  pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>);
+  typename pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>::Ptr in_cloud(new typename  pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>);
   std::ifstream infile(file_name);
   typename pcl::PointSegmentedDistribution<NUM_CLASS> point;
   float rf;
   float gf;
   float bf;
   while(!infile.eof()) {
+
     infile >> point.x >> point.y >> point.z >> rf >> gf >> bf >> point.label;
+    //infile >> point.x >> point.y >> point.z >> point.label;
     for (int j = 0 ;j < NUM_CLASS; j++) 
       infile >> point.label_distribution[j];
     uint8_t r = int(rf*255), g = int(gf*255), b = int(bf*255);
+    //uint8_t r = int(250), g = int(250), b = int(250);
     // Example: Red color
     //std::cout << (int)r << " " <<(int) g << " " <<(int) b <<std::endl;
     uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
     point.rgb = *reinterpret_cast<float*>(&rgb);
     in_cloud->push_back(point);
+    //std::cout<<"file "<<file_name<<", in_cloud->size is "<<in_cloud->size()<<", xyz "<<point.x<<","<<point.y<<","<<point.z<<std::endl;
   }
   return in_cloud;
 }
@@ -181,7 +188,7 @@ read_seg_pcd_text(const std::string & file_name) {
 void query_test(const std::shared_ptr<octomap::SemanticOcTree> octree_ptr ) {
   
   // Read pc poses
-  std::string pose_file = "/home/biped/perl_code/workspace/src/segmentation_projection/data/nclt_04_29/pose_sequence.txt";
+  std::string pose_file = "/home/biped/perl_code/workspace/src/segmentation_projection/data/nclt_04_29/pose_sequence_16.txt";
   std::unordered_map<uint64_t, std::vector<double>> time2pose = ReadPointCloudPoses(pose_file);
   std::cout << "Query: Read poses size: " << time2pose.size() << std::endl;
 
@@ -189,7 +196,8 @@ void query_test(const std::shared_ptr<octomap::SemanticOcTree> octree_ptr ) {
   std::string time_file = "/home/biped/perl_code/rvsm/nclt_may23_gt/gt_times.txt";
   std::ifstream time_in(time_file);
   std::string time_line;
-  std::string seq_path("/home/biped//perl_code/gicp/visualization/data/rvm_04_29/");
+  //std::string seq_path("/home/biped//perl_code/gicp/visualization/data/rvm_04_29/");
+  std::string seq_path("/home/biped//perl_code/workspace/src/segmentation_projection/data/nclt_04_29/nclt_lidar_downsampled/");
   
   while (std::getline(time_in, time_line)) {
     std::stringstream ss(time_line);
@@ -199,10 +207,10 @@ void query_test(const std::shared_ptr<octomap::SemanticOcTree> octree_ptr ) {
     if (!exists(csv_file)) {
       std::cout << "Can't find csv file " << csv_file << " at time " << time << std::endl;
       continue;
-    }
+    } 
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr pc = read_nclt_pc_file(csv_file);
-    std::cout << "Query:: Process " << pc->size() << " points at time " << time << std::endl;
+    //std::cout << "Query:: Process " << pc->size() << " points at time " << time << std::endl;
     Eigen::Matrix4d T;
     T.setIdentity();
     for (int r=0; r<3; ++r){
@@ -227,7 +235,7 @@ int main(int argc, char ** argv) {
   ROS_INFO("nclt 14-class pc_painter init....");
   segmentation_projection::PointCloudPainter<14> painter;
 
-  std::string seg_pcds(argv[1]);
+  std::string seg_pcds(argv[1]); // segmented pcds
   std::string pose_path(argv[2]);
 
   std::ifstream in_pose(pose_path);
@@ -235,16 +243,18 @@ int main(int argc, char ** argv) {
   int counter = 0;
    
   while (std::getline(in_pose, pose_line)) {
-    counter ++;
-    std::cout<<"counter "<<counter<<std::endl;
+
     std::stringstream ss(pose_line);    
     uint64_t pose_time;
     ss >> pose_time;
+
+    
     std::string file =  seg_pcds + "/" + std::to_string(pose_time) + ".txt" ;
     if ( !exists( file ) ) {
       std::cout << "Can't find pcd file "<<file<<" at time "<<pose_time << std::endl;
       continue;
-    }
+    } else
+      std::cout<<"Read "<<file<<" at time "<<pose_time << std::endl;
 
     pcl::PointCloud<pcl::PointSegmentedDistribution<14>>::Ptr pc = read_seg_pcd_text<14>(file);
     //pcl::PointCloud<pcl::PointSegmentedDistribution<14>>::Ptr pc(new pcl::PointCloud<pcl::PointSegmentedDistribution<14>>);
@@ -252,6 +262,7 @@ int main(int argc, char ** argv) {
 
     Eigen::Matrix4d T;
     T.setIdentity();
+    
     for (int r = 0; r < 3; r++){
       for (int c = 0; c < 4; c++) {
         double pose;
@@ -259,13 +270,24 @@ int main(int argc, char ** argv) {
         T(r, c) = pose;
       }
     }
+
+
+    //for gloabl frame points
+    //Eigen::Matrix4d T_inv;
+    //T_inv = T.inverse();
+    //Eigen::Affine3d T_inv_aff(T_inv.matrix());
+    //pcl::transformPointCloud(*pc, *pc, T_inv_aff);
+    
     Eigen::Affine3d aff(T.matrix());
     std::cout<<"Process "<<pc->size()<<" labeled points at time "<< pose_time<<std::endl;
     std::cout<<T<<std::endl;
 
                   
-    painter.FuseMapIncremental(*pc, aff, ((double)pose_time) / 1e9);
-    
+    painter.FuseMapIncremental(*pc, aff, ((double)pose_time) / 1e6, false);
+    std::cout<<"counter "<<counter<<std::endl;
+    counter ++;
+
+      
   }
   
   query_test(painter.get_octree_ptr());

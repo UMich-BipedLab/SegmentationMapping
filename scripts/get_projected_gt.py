@@ -102,9 +102,9 @@ def gt_projection(lidar, lidar_distribution,
         else:
             color = label_to_color[0]
 
-        cv2.circle(rgb_img, (u, v),2, color )
-    cv2.imshow("gt projection", rgb_img)
-    cv2.waitKey(500)
+        cv2.circle(rgb_img, (u, v),2, (color[2], color[1], color[0] ) )
+    #cv2.imshow("gt projection", rgb_img)
+    #cv2.waitKey(500)
     ########################################################################
     return lidars_left, labels, distribution_left
 
@@ -153,12 +153,16 @@ def batch_gt_projection_nclt(query_lidar_folder,
         camera_prefix = query_file[:4]
         camera_ind = int(camera_prefix[-1])
 
-        if camera_ind == 1 or camera_ind == 4:
-            continue
+        ##if camera_ind == 1 or camera_ind == 4:
+        ##    continue
+
         ind += 1
         camera_i_list = camera_ind - 1
         time = query_file[5:-4]
         print("Processing "+query_file+", time is "+time, " frame counter is "+str(ind))
+        if os.path.exists(query_lidar_folder + "/" + time + ".txt" ) == False:
+            continue
+        
         
         lidar, lidar_distribution = read_input_pc_with_distribution( query_lidar_folder + "/" + time + ".txt" )
 

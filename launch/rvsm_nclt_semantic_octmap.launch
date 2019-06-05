@@ -10,20 +10,23 @@
 
   <!--<arg name="pc_bag_file" default="/home/biped/seagate/bagfiles/2019-03-12/2019-03-21-23-41-42.bag /home/biped/seagate/bagfiles/2019-03-12/nclt_gt_filtered.bag" /> -->
 
-  <!-- <arg name="seg_pcds_folder" default="$(find segmentation_projection)/data/nclt_04_29/rvm_segmented_txt/" />-->
-  <arg name="seg_pcds_folder" default="$(find segmentation_projection)/data/nclt_04_29/seg_pcds/" />
-  <arg name="pose_sequence_file" default="$(find segmentation_projection)/data/nclt_04_29/pose_sequence.txt" />
+  <!--<arg name="seg_pcds_folder" default="$(find segmentation_projection)/data/nclt_04_29/seg_pcds_downsampled/" /> -->
+  <arg name="seg_pcds_folder" default="$(find segmentation_projection)/data/nclt_04_29/octree_centroids/" />
  
+  <arg name="pose_sequence_file" default="$(find segmentation_projection)/data/nclt_04_29/pose_sequence_16.txt" /> 
+
+  <!--<arg name="seg_pcds_folder" default="$(find segmentation_projection)/data/nclt_04_29/segmented_txt_rvm/" />-->
+  <!--<arg name="pose_sequence_file" default="$(find segmentation_projection)/data/nclt_04_29/pose_sequence.txt" /> -->
 
   <?ignore <node pkg="rosbag" type="play" name="player" output="screen" args="--clock -r 0.1 -s 100 -q $(arg pc_bag_file)"/> --> ?>
   
   <!-- Visualize in rviz -->
-  <!-- <node pkg="rviz" type="rviz" name="rviz"  /> -->
+  <!--<node pkg="rviz" type="rviz" name="rviz"  />-->
 
   <!-- <rosparam file="$(find segmentation_projection)/data/nclt_04_29/label2color.yaml" command="load"/> -->
   
   <!-- Painting point cloud -->
-  <node pkg="segmentation_projection" type="nclt_map_node" name="nclt_map_node" args="$(arg seg_pcds_folder) $(arg pose_sequence_file)"  output="screen"  >
+  <node pkg="segmentation_projection" type="nclt_map_node" name="nclt_map_node" args="$(arg seg_pcds_folder) $(arg pose_sequence_file)"  output="screen"  launch-prefix="xterm -e gdb --args"  >
   
     <remap from="~cloud_in" to="/labeled_pointcloud" />
     <remap from="~cloud_out" to="/labeled_pointcloud_pc2" />
@@ -32,17 +35,17 @@
     <param name="distribution_enabled" type="bool" value="true" />
     <param name="static_frame"  type="string" value="/map" />
     <param name="body_frame"  type="string" value="/body" />
-    <param name="stacking_visualization_enabled" type="bool" value="false" />
-    <param name="path_visualization_enabled" type="bool" value="true" />
+    <param name="stacking_visualization_enabled" type="bool" value="true" />
+    <param name="path_visualization_enabled" type="bool" value="false" />
     <param name="save_pcd_enabled" type="bool" value="false" />
     
     <param name="octomap_enabled" type="bool" value="true"/>
-    <param name="octomap_num_frames" type="int" value="480" />
+    <param name="octomap_num_frames" type="int" value="5" />
     <param name="octomap_max_dist" type="int" value="15" />
     <param name="octomap_resolution" type="double" value="0.2" />
     <param name="octomap_prob_hit" type="double" value="0.53" />
-    <param name="octomap_prob_miss" type="double" value="0.3" />
-    <param name="octomap_occupy_thresh" type="double" value="0.52" />
+    <param name="octomap_prob_miss" type="double" value="0.3" />        <!-- 0.3 --> 
+    <param name="octomap_occupy_thresh" type="double" value="0.52" /> <!-- 0.52 --> 
 
   </node>
 
