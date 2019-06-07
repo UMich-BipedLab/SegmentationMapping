@@ -4,7 +4,10 @@ project(segmentation_projection)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 SET(CMAKE_BUILD_TYPE Debug)
-  
+
+#list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -28,13 +31,27 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(PCL REQUIRED)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
+message(${PCL_INCLUDE_DIRS})
 
-find_package(Eigen3 REQUIRED)
+#SET( EIGEN_INCLUDE_DIR /home/biped/thirdparty/eigen/ )
+#SET(Eigen3_DIR /home/biped/thirdparty/tensorflow_tools/eigen/build/)
+find_package (Eigen3  REQUIRED )
+#IF( NOT EIGEN3_INCLUDE_DIR )
+#    MESSAGE( FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
+#ENDIF()
+#message(${EIGEN3_INCLUDE_DIR})
+
+find_package(TensorflowCC REQUIRED COMPONENTS Shared)
+#include_directories(${TensorFlow_INCLUDE_DIR})
+#link_directories(${TensorFlow_LIBRARY})
+
 
 find_package(octomap REQUIRED)
 include_directories(${OCTOMAP_INCLUDE_DIRS})
 link_directories(${OCTOMAP_LIBRARY_DIRS})
 message(${OCTOMAP_INCLUDE_DIRS})
+
+
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -138,8 +155,9 @@ include_directories(
  include/segmentation_projection
 ${catkin_INCLUDE_DIRS}
 ${PCL_INCLUDE_DIRS}
-${EIGEN3_INCLUDE_DIRS}
+${EIGEN_INCLUDE_DIR}
 ${OCTOMAP_INCLUDE_DIRS}
+${TensorFlow_INCLUDE_DIR}
 )
 
 
@@ -160,6 +178,7 @@ ${OCTOMAP_INCLUDE_DIRS}
 add_executable(labeled_pc_map_node src/labeled_pc_map_node.cpp)
 add_executable(nclt_map_node      src/rvsm_nclt_node.cpp)
 add_executable(query_semantic_tree src/query_semantic_tree.cpp)
+add_executable(stereo_segmentation_node src/stereo_segmentation_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -189,6 +208,10 @@ target_link_libraries(query_semantic_tree
   ${PCL_COMMON_LIBRARIES}
   ${PCL_IO_LIBRARIES}
   ${OCTOMAP_LIBRARIES}
+)
+target_link_libraries(stereo_segmentation_node
+  ${catkin_LIBRARIES}
+  TensorflowCC::Shared
 )
 
 #############
