@@ -237,9 +237,9 @@ namespace segmentation_projection {
 
       // Fill in color
       *iter_a = 255;
-      *iter_r = color[2];
+      *iter_r = color[0];
       *iter_g = color[1];
-      *iter_b = color[0];
+      *iter_b = color[2];
     
     
     }

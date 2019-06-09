@@ -20,6 +20,7 @@
 #include <std_msgs/Header.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Path.h>
+#include <nav_msgs/OccupancyGrid.h>
 
 #include <pcl_ros/point_cloud.h>
 #include <pcl/filters/voxel_grid.h>
@@ -52,6 +53,9 @@
 // for the PointSegmentedDistribution
 #include "PointSegmentedDistribution.hpp"
 
+// compute linear index for given map coords
+#define MAP_IDX(sx, i, j) ((sx) * (j) + (i))
+
 namespace segmentation_projection {
   template<unsigned int NUM_CLASS>
   class PointCloudPainter {
@@ -69,6 +73,7 @@ namespace segmentation_projection {
       , pointcloud_seg_stacked_ptr_(new typename pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>)
       , path_visualization_enabled_(true)
       , color_octomap_enabled_(true)
+      , occupancy_grid_enabled_(false)
       , octomap_enabled_(false)
       , octomap_resolution_(0.1)
         //, octree_ptr_(new octomap::ColorOcTree(0.1))
@@ -86,6 +91,7 @@ namespace segmentation_projection {
       pnh.getParam( "stacking_visualization_enabled", stacking_visualization_enabled_);
       pnh.getParam("path_visualization_enabled", path_visualization_enabled_);
       pnh.getParam("color_octomap_enabled", color_octomap_enabled_);
+      pnh.getParam("occupancy_grid_enabled", occupancy_grid_enabled_);
       pnh.getParam("octomap_enabled", octomap_enabled_);
       pnh.getParam("octomap_num_frames", octomap_num_frames_);
       pnh.getParam("octomap_max_dist", octomap_max_dist_);
@@ -112,6 +118,24 @@ namespace segmentation_projection {
         pnh.getParam("octomap_prob_miss", prob_miss);
         color_octree_ptr_->setProbHit(prob_hit);
         color_octree_ptr_->setProbMiss(prob_miss);
+      }
+
+      if (occupancy_grid_enabled_) {
+        occupancy_grid_ptr_ = std::make_shared<nav_msgs::OccupancyGrid>(nav_msgs::OccupancyGrid());
+        // set up occupancy grid info
+        occupancy_grid_ptr_->info.resolution = 1.0;
+        occupancy_grid_ptr_->info.width = 200;
+        occupancy_grid_ptr_->info.height = 200;
+        occupancy_grid_ptr_->info.origin.position.x = -100.0;
+        occupancy_grid_ptr_->info.origin.position.y = -100.0;
+        occupancy_grid_ptr_->info.origin.position.z = 0.0;
+        occupancy_grid_ptr_->info.origin.orientation.x = 0.0;
+        occupancy_grid_ptr_->info.origin.orientation.y = 0.0;
+        occupancy_grid_ptr_->info.origin.orientation.z = 0.0;
+        occupancy_grid_ptr_->info.origin.orientation.w = 1.0;
+        occupancy_grid_ptr_->data.resize(occupancy_grid_ptr_->info.width * occupancy_grid_ptr_->info.height);
+        std::fill(occupancy_grid_ptr_->data.begin(), occupancy_grid_ptr_->data.end(), -1);
+        occupancy_grid_publisher_ = pnh.advertise<nav_msgs::OccupancyGrid>("occupancy_grid", 1, true);
       }
 
       if (octomap_enabled_) {
@@ -148,8 +172,6 @@ namespace segmentation_projection {
       ROS_INFO("ros_pc_map init finish\n");
 
       pose_file_.open("pose_sequence.txt");
-      
-      
     }
 
     void PointCloudCallback(const sensor_msgs::PointCloudConstPtr& cloud_msg);
@@ -172,8 +194,8 @@ namespace segmentation_projection {
     bool stacking_visualization_enabled_;
     bool path_visualization_enabled_;
     bool color_octomap_enabled_;
+    bool occupancy_grid_enabled_;
     bool octomap_enabled_;
-
 
     // for voxel grid map
     ros::Publisher stacked_pc_publisher_;
@@ -193,6 +215,10 @@ namespace segmentation_projection {
     // for color octomap
     std::shared_ptr<octomap::ColorOcTree> color_octree_ptr_;
     ros::Publisher color_octomap_publisher_;
+
+    // for occupancy grid map
+    std::shared_ptr<nav_msgs::OccupancyGrid> occupancy_grid_ptr_;
+    ros::Publisher occupancy_grid_publisher_;
 
 
     // for semantic octomap
@@ -280,6 +306,24 @@ namespace segmentation_projection {
         color_octree_ptr_->averageNodeColor(x, y, z, r, g, b);
       }
 
+      if (occupancy_grid_enabled_) {
+        int map_index = MAP_IDX(occupancy_grid_ptr_->info.width,
+                                int(x-occupancy_grid_ptr_->info.origin.position.x),
+                                int(y-occupancy_grid_ptr_->info.origin.position.y));
+
+        if (map_index < occupancy_grid_ptr_->info.width * occupancy_grid_ptr_->info.height) {
+          //std::cout << "x: " << x << std::endl;
+          //std::cout << "y: " << y << std::endl;
+          //std::cout << "map index: " << map_index;
+          if (z < 2.0)
+            occupancy_grid_ptr_->data[map_index] = 0;
+          else
+            occupancy_grid_ptr_->data[map_index] = 100;
+        }
+      }
+
+
+
       if (octomap_enabled_) {
         if (is_update_occupancy)
           octree_ptr_->updateNode(endpoint, true); // integrate 'occupied' measurement
@@ -306,6 +350,13 @@ namespace segmentation_projection {
       cmap_msg.header.frame_id = this->static_frame_;
       cmap_msg.header.stamp = stamp;
       color_octomap_publisher_.publish(cmap_msg);
+    }
+
+    if (occupancy_grid_enabled_) {
+      std::cout << "publishing occupancy grid\n";
+      occupancy_grid_ptr_->header.frame_id = this->static_frame_;
+      occupancy_grid_ptr_->header.stamp = stamp;
+      occupancy_grid_publisher_.publish(*occupancy_grid_ptr_); 
     }
 
     if (octomap_enabled_){

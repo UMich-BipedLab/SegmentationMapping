@@ -23,6 +23,7 @@
     <param name="path_visualization_enabled" type="bool" value="true" />
     <param name="save_pcd_enabled" type="bool" value="false" />
     <param name="color_octomap_enabled" type="bool" value="true" />
+    <param name="occupancy_grid_enabled" type="bool" value="true" />
 
     <!-- for semantic octomap generation -->
     <param name="octomap_enabled" type="bool" value="false"/>
