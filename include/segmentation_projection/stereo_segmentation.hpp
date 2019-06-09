@@ -109,12 +109,9 @@ namespace segmentation_projection {
     g_channel.name = "g";
     sensor_msgs::ChannelFloat32 b_channel;
     b_channel.name = "b";
-    cloud_msg->channels.push_back(label_channel);
-    cloud_msg->channels.push_back(r_channel);
-    cloud_msg->channels.push_back(g_channel);
-    cloud_msg->channels.push_back(b_channel);
 
-    
+    sensor_msgs::ChannelFloat32 distribution_channel;
+
     // Use correct principal point from camera info
     float center_x = model_.cx();
     float center_y = model_.cy();
@@ -152,12 +149,28 @@ namespace segmentation_projection {
       cloud_msg->points.push_back(p);
 
       // Fill in r g b channels: bgr
-      r_channel.values.push_back(color[2]);
+      r_channel.values.push_back(color[0]);
       g_channel.values.push_back(color[1]);
-      b_channel.values.push_back(color[0]);
+      b_channel.values.push_back(color[2]);
+
+      // Fill in semantics
+      label_channel.values.push_back(1);
+      distribution_channel.values.push_back(1);
+
 
     }
    }
+    
+    cloud_msg->channels.push_back(label_channel);
+    cloud_msg->channels.push_back(r_channel);
+    cloud_msg->channels.push_back(g_channel);
+    cloud_msg->channels.push_back(b_channel);
+    cloud_msg->channels.push_back(r_channel);
+    cloud_msg->channels.push_back(g_channel);
+    cloud_msg->channels.push_back(b_channel);
+    cloud_msg->channels.push_back(distribution_channel);
+
+    
     pc1_publisher_.publish(cloud_msg);
   };
 

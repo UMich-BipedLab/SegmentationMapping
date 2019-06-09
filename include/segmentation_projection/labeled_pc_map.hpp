@@ -68,6 +68,7 @@ namespace segmentation_projection {
       , stacked_pc_ptr_(new pcl::PointCloud<pcl::PointXYZRGB>)
       , pointcloud_seg_stacked_ptr_(new typename pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>)
       , path_visualization_enabled_(true)
+      , color_octomap_enabled_(true)
       , octomap_enabled_(false)
       , octomap_resolution_(0.1)
         //, octree_ptr_(new octomap::ColorOcTree(0.1))
@@ -84,6 +85,7 @@ namespace segmentation_projection {
       pnh.getParam("save_pcd_enabled", save_pcd_enabled_);
       pnh.getParam( "stacking_visualization_enabled", stacking_visualization_enabled_);
       pnh.getParam("path_visualization_enabled", path_visualization_enabled_);
+      pnh.getParam("color_octomap_enabled", color_octomap_enabled_);
       pnh.getParam("octomap_enabled", octomap_enabled_);
       pnh.getParam("octomap_num_frames", octomap_num_frames_);
       pnh.getParam("octomap_max_dist", octomap_max_dist_);
@@ -99,6 +101,17 @@ namespace segmentation_projection {
 
       if (path_visualization_enabled_) {
         this->path_publisher_ = pnh.advertise<nav_msgs::Path>("path_out", 1);
+      }
+
+      if (color_octomap_enabled_) {
+        color_octree_ptr_ = std::make_shared<octomap::ColorOcTree>(octomap::ColorOcTree(octomap_resolution_));
+        color_octomap_publisher_ = pnh.advertise<octomap_msgs::Octomap>("color_octomap_out", 10);
+        color_octree_ptr_->setOccupancyThres(0.52);
+        double prob_hit = 0.5, prob_miss = 0.5;
+        pnh.getParam("octomap_prob_hit", prob_hit);
+        pnh.getParam("octomap_prob_miss", prob_miss);
+        color_octree_ptr_->setProbHit(prob_hit);
+        color_octree_ptr_->setProbMiss(prob_miss);
       }
 
       if (octomap_enabled_) {
@@ -158,6 +171,7 @@ namespace segmentation_projection {
     bool save_pcd_enabled_;
     bool stacking_visualization_enabled_;
     bool path_visualization_enabled_;
+    bool color_octomap_enabled_;
     bool octomap_enabled_;
 
 
@@ -175,6 +189,11 @@ namespace segmentation_projection {
     nav_msgs::Path path_;
     std::ofstream pose_file_;
     void add_pose_to_path(const Eigen::Affine3d & T_map2body_new, const std_msgs::Header & header);
+
+    // for color octomap
+    std::shared_ptr<octomap::ColorOcTree> color_octree_ptr_;
+    ros::Publisher color_octomap_publisher_;
+
 
     // for semantic octomap
     std::shared_ptr<octomap::SemanticOcTree> octree_ptr_;
@@ -256,69 +275,87 @@ namespace segmentation_projection {
       float z = p.z; // for NCLT only
       octomap::point3d endpoint ( x,  y, z);
 
+      if (color_octomap_enabled_) {
+        octomap::ColorOcTreeNode* n = color_octree_ptr_->updateNode(endpoint, true);
+        color_octree_ptr_->averageNodeColor(x, y, z, r, g, b);
+      }
+
+      if (octomap_enabled_) {
+        if (is_update_occupancy)
+          octree_ptr_->updateNode(endpoint, true); // integrate 'occupied' measurement
+        
+        octomap::SemanticOcTreeNode * result = octree_ptr_->search(endpoint);
+        std::vector<float> label_dist(p.label_distribution, std::end(p.label_distribution));
+        if (i == 0) {
+          std::cout<<"Before recurrent tree update, @ "<<x<<", "<<y << ", "<<z<<" the distribution is  ";
+          std::cout<< result->getSemantics()<<"\n";
+        }
+        //octree_ptr_->averageNodeColor(result, r, g, b);
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+        //octree_ptr_->averageNodeColor( x,  y,  z, r, g, b);
+      }
+    }
+
+    if (color_octomap_enabled_) {
+      std::cout<<"publishing color octree\n";
+      octomap_msgs::Octomap cmap_msg;
+      cmap_msg.binary = 0 ;
+      cmap_msg.resolution = 0.1;
+      octomap_msgs::fullMapToMsg(*color_octree_ptr_, cmap_msg);
+      cmap_msg.header.frame_id = this->static_frame_;
+      cmap_msg.header.stamp = stamp;
+      color_octomap_publisher_.publish(cmap_msg);
+    }
+
+    if (octomap_enabled_){
       if (is_update_occupancy)
-        octree_ptr_->updateNode(endpoint, true); // integrate 'occupied' measurement
+        octree_ptr_->updateInnerOccupancy();
       
-      octomap::SemanticOcTreeNode * result = octree_ptr_->search(endpoint);
-      std::vector<float> label_dist(p.label_distribution, std::end(p.label_distribution));
-      if (i == 0) {
-        std::cout<<"Before recurrent tree update, @ "<<x<<", "<<y << ", "<<z<<" the distribution is  ";
-        std::cout<< result->getSemantics()<<"\n";
-      }
-      //octree_ptr_->averageNodeColor(result, r, g, b);
-      octree_ptr_->averageNodeSemantics(result, label_dist );
-
-      //octree_ptr_->averageNodeColor( x,  y,  z, r, g, b);
-
-    }
-
-    if (is_update_occupancy)
-      octree_ptr_->updateInnerOccupancy();
-    
-    
-    if (is_write_centroids) {
-      uint64_t get_usec = (uint64_t)stamp.toNSec() / 1000;
-      std::ofstream centroids_file("octree_centroids/" + std::to_string(get_usec) + ".txt");
       
-      for (octomap::SemanticOcTree::leaf_iterator it = octree_ptr_->begin_leafs(),
-             //for (octomap::ColorOcTree::leaf_iterator it = octree_ptr_->begin_leafs(),
-             end=octree_ptr_->end_leafs(); it!= end; ++it)  {
-        centroids_file << it.getX() <<" "
-                       << it.getY() <<" "
-                       << it.getZ() <<"\n";
+      if (is_write_centroids) {
+        uint64_t get_usec = (uint64_t)stamp.toNSec() / 1000;
+        std::ofstream centroids_file("octree_centroids/" + std::to_string(get_usec) + ".txt");
+        
+        for (octomap::SemanticOcTree::leaf_iterator it = octree_ptr_->begin_leafs(),
+               //for (octomap::ColorOcTree::leaf_iterator it = octree_ptr_->begin_leafs(),
+               end=octree_ptr_->end_leafs(); it!= end; ++it)  {
+          centroids_file << it.getX() <<" "
+                         << it.getY() <<" "
+                         << it.getZ() <<"\n";
 
+        }
+        centroids_file.close();
+                                         
       }
-      centroids_file.close();
-                                       
-    }
 
-    // for debugging
-    for (int i = 0; i < 1; i++  ) {
-      pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
+      // for debugging
+      for (int i = 0; i < 1; i++  ) {
+        pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
 
-      float x = p.x;
-      float y = p.y;
-      float z = p.z; // for NCLT only
-      octomap::point3d endpoint ( x,  y, z);
+        float x = p.x;
+        float y = p.y;
+        float z = p.z; // for NCLT only
+        octomap::point3d endpoint ( x,  y, z);
 
-      octomap::SemanticOcTreeNode * result = octree_ptr_->search(endpoint);
+        octomap::SemanticOcTreeNode * result = octree_ptr_->search(endpoint);
 
-      std::cout<<"After recurrent tree update, @ "<<x<<", "<<y << ", "<<z<<" the distribution is  ";
-      for (auto && d : result->getSemantics().label) {
-        std::cout<<d<<" ";
+        std::cout<<"After recurrent tree update, @ "<<x<<", "<<y << ", "<<z<<" the distribution is  ";
+        for (auto && d : result->getSemantics().label) {
+          std::cout<<d<<" ";
+        }
+        std::cout<<"\n";
       }
-      std::cout<<"\n";
+
+      std::cout<<"publishing octree\n";
+      octomap_msgs::Octomap bmap_msg;
+      bmap_msg.binary = 0 ;
+      bmap_msg.resolution = 0.1;
+      octomap_msgs::fullMapToMsg(*octree_ptr_, bmap_msg);
+      bmap_msg.header.frame_id = this->static_frame_;
+      bmap_msg.header.stamp = stamp;
+      octomap_publisher_.publish(bmap_msg);
     }
-
-    std::cout<<"publishing octree\n";
-    octomap_msgs::Octomap bmap_msg;
-    bmap_msg.binary = 0 ;
-    bmap_msg.resolution = 0.1;
-    octomap_msgs::fullMapToMsg(*octree_ptr_, bmap_msg);
-    bmap_msg.header.frame_id = this->static_frame_;
-    bmap_msg.header.stamp = stamp;
-    octomap_publisher_.publish(bmap_msg);
-
   }
 
   template <unsigned int NUM_CLASS>
@@ -411,7 +448,7 @@ namespace segmentation_projection {
       p.z = cloud_msg->points[i].z;
 
       // filter out points that are too far away
-      if (p.x * p.x + p.y * p.y + p.z * p.z < octomap_max_dist_ * octomap_max_dist_ )
+      if (p.x * p.x + p.y * p.y + p.z * p.z > octomap_max_dist_ * octomap_max_dist_ )
         continue;
 
       // filter out sky, background
@@ -494,12 +531,12 @@ namespace segmentation_projection {
     }
 
     // produce the color octomap. 
-    if (this->octomap_enabled_) {
+    if (this->octomap_enabled_ || this->color_octomap_enabled_) {
       this->add_pc_to_octomap(pointcloud_seg,T_map2body_eigen, true, "", cloud_msg->header.stamp);
       this->octomap_frame_counter_++;
-      if (this->octomap_frame_counter_ == this->octomap_num_frames_) {
-        octree_ptr_->write("semantic_octree.ot");
-      }
+      //if (this->octomap_frame_counter_ == this->octomap_num_frames_) {
+        //octree_ptr_->write("semantic_octree.ot");
+      //}
     }
     counter ++;
     std::cout<<"counter "<<counter<<std::endl;
