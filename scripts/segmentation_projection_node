@@ -14,7 +14,8 @@ from geometry_msgs.msg import Point32
 from cv_bridge import CvBridge, CvBridgeError
 
 # our projection library
-from projection import LidarSeg, NeuralNetConfigs
+from projection import LidarSeg
+from NeuralNetConfigs import NeuralNetConfigs
 # map label to color
 from label2color import label_to_color, background
 # our distortion lib

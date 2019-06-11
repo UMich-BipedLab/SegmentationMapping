@@ -171,7 +171,6 @@ namespace segmentation_projection {
       
       ROS_INFO("ros_pc_map init finish\n");
 
-      pose_file_.open("pose_sequence.txt");
     }
 
     void PointCloudCallback(const sensor_msgs::PointCloudConstPtr& cloud_msg);
@@ -209,7 +208,6 @@ namespace segmentation_projection {
     // for path visualization
     ros::Publisher path_publisher_;
     nav_msgs::Path path_;
-    std::ofstream pose_file_;
     void add_pose_to_path(const Eigen::Affine3d & T_map2body_new, const std_msgs::Header & header);
 
     // for color octomap
@@ -315,7 +313,7 @@ namespace segmentation_projection {
           //std::cout << "x: " << x << std::endl;
           //std::cout << "y: " << y << std::endl;
           //std::cout << "map index: " << map_index;
-          if (z < 2.0)
+          if (z < 2.0 && p.label == 3)
             occupancy_grid_ptr_->data[map_index] = 0;
           else
             occupancy_grid_ptr_->data[map_index] = 100;
@@ -460,7 +458,6 @@ namespace segmentation_projection {
   template <unsigned int NUM_CLASS>
   inline void
   PointCloudPainter<NUM_CLASS>::PointCloudCallback(const sensor_msgs::PointCloudConstPtr& cloud_msg) {
-    static uint64_t counter = 0;
     sensor_msgs::PointCloud2 painted_cloud;
     sensor_msgs::PointCloud2 stacked_cloud;
     //sensor_msgs::convertPointCloudToPointCloud2(*cloud_msg, painted_cloud);
@@ -482,13 +479,6 @@ namespace segmentation_projection {
     }
     Eigen::Affine3d T_map2body_eigen;
     tf::transformTFToEigen (transform,T_map2body_eigen);
-    pose_file_ << cloud_msg->header.stamp.toNSec()  <<" ";
-    pose_file_ << T_map2body_eigen(0, 0) <<" "<<T_map2body_eigen(0, 1)<<" "<<T_map2body_eigen(0, 2)<<" "<<T_map2body_eigen(0, 3)<<" "<<
-      T_map2body_eigen(1, 0)<<" "<<T_map2body_eigen(1, 1)<<" "<<T_map2body_eigen(1, 2)<<" "<<T_map2body_eigen(1, 3)<<" "<<
-      T_map2body_eigen(2, 0)<<" "<<T_map2body_eigen(2, 1)<<" "<<T_map2body_eigen(2, 2)<<" "<<T_map2body_eigen(2, 3)<<"\n";
-
-
-
   
     //for (int j = 0; j < img.rows; ++j) {
     std::cout<<"At time "<<cloud_msg->header.stamp.toSec()<<", # of lidar pts is "<<cloud_msg->points.size()<<std::endl;
@@ -502,9 +492,9 @@ namespace segmentation_projection {
       if (p.x * p.x + p.y * p.y + p.z * p.z > octomap_max_dist_ * octomap_max_dist_ )
         continue;
 
-      // filter out sky, background
+      // filter out sky, background, human
       int label = cloud_msg->channels[0].values[i];
-      if (label == 13 || label== 0)
+      if (label == 13 || label== 0 || label == 8 )
         continue;
 
       
@@ -560,11 +550,10 @@ namespace segmentation_projection {
                                                                                 *pointcloud_seg_stacked_ptr_,
                                                                                 T_map2body_eigen);
 
-        if (counter % 10 == 0) {
-          ROS_INFO("Save PCD file for the stacked pointcloud with label distribution");
-          pcl::io::savePCDFile ("segmented_pcd/stacked_pc_distribution.pcd", *pointcloud_seg_stacked_ptr_);
-          pcl::io::savePCDFile ("segmented_pcd/stacked_pc_rgb.pcd", pointcloud_pcl);
-        }
+        ROS_INFO("Save PCD file for the stacked pointcloud with label distribution");
+        pcl::io::savePCDFile ("segmented_pcd/stacked_pc_distribution.pcd", *pointcloud_seg_stacked_ptr_);
+        pcl::io::savePCDFile ("segmented_pcd/stacked_pc_rgb.pcd", pointcloud_pcl);
+          
 
       }
 
@@ -588,12 +577,6 @@ namespace segmentation_projection {
       //if (this->octomap_frame_counter_ == this->octomap_num_frames_) {
         //octree_ptr_->write("semantic_octree.ot");
       //}
-    }
-    counter ++;
-    std::cout<<"counter "<<counter<<std::endl;
-    if (counter == 600) {
-      std::cout<<"save pose file\n";
-      pose_file_.close();
     }
 
   }

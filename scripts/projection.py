@@ -16,16 +16,7 @@ import rospy, pdb
 from label2color import  background, label_to_color
 from helper import get_cropped_uv_rotated, is_out_of_bound, is_out_of_bound_rotated, softmax, publish_pcl_pc2, publish_pcl_pc2_label
 
-
-NeuralNetConfigs = namedtuple("NeuralNetConfigs", "path \
-                                                   num_classes \
-                                                   image_input_tensor \
-                                                   is_train_input_tensor \
-                                                   input_width \
-                                                   input_height \
-                                                   label_output_tensor \
-                                                   distribution_output_tensor \
-                                                   ")
+from NeuralNetConfigs import NeuralNetConfigs
 
 class LidarSeg:
     def __init__(self, net_configs):
@@ -53,7 +44,7 @@ class LidarSeg:
         else:
             self.distribution_tensor = None
         self.num_output_class = net_configs.num_classes
-
+        pdb.set_trace()
         # initialization
         tf.global_variables_initializer().run(session=self.sess)
 

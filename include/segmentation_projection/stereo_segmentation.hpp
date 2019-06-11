@@ -6,6 +6,8 @@
 #include <vector>
 #include <memory>
 #include <cassert>
+#include <tuple>
+#include <unordered_map>
 // ros
 #include <ros/ros.h>
 #include <ros/console.h>
@@ -21,9 +23,14 @@
 #include <cv_bridge/cv_bridge.h>
 #include <image_geometry/pinhole_camera_model.h>
 
+#include <Eigen/Dense>
+#include <Eigen/Core>
+
 // opencv
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/matx.hpp>
+#include <opencv2/core/eigen.hpp>
 
 
 // boost
@@ -65,17 +72,32 @@ namespace segmentation_projection {
       num_skip_frames = pnh.getParam("skip_every_k_frame", num_skip_frames);
 
 
-      // init tensorflow 
+      // init tensorflow
+      std::string input_tensor_name, output_distribution_tensor_name, output_label_tensor_name;
       pnh.getParam("tf_input_tensor", input_tensor_name);
       pnh.getParam("tf_label_output_tensor", output_label_tensor_name);
       pnh.getParam("tf_distribution_output_tensor", output_distribution_tensor_name);
       std::string frozen_graph_path;
       pnh.getParam("tf_frozen_graph_path", frozen_graph_path );
+      ROS_INFO("Init tf_Inference....");
       tf_infer.reset(new tfInference(frozen_graph_path, input_tensor_name,
                                      output_label_tensor_name, output_distribution_tensor_name));
       ROS_DEBUG_STREAM("Init tensorflow and revoke frozen graph from "<<frozen_graph_path);
 
-
+      label2color[2]  =std::make_tuple(250, 250, 250 ); // road
+      label2color[3]  =std::make_tuple(128, 64,  128 ); // sidewalk
+      label2color[5]  =std::make_tuple(250, 128, 0   ); // building
+      label2color[10] =std::make_tuple(192, 192, 192 ); // pole
+      label2color[12] =std::make_tuple(250, 250, 0   ); // sign
+      label2color[6]  =std::make_tuple(0  , 100, 0   ); // vegetation
+      label2color[4]  =std::make_tuple(128, 128, 0   ); // terrain
+      label2color[13] =std::make_tuple(135, 206, 235 ); // sky
+      label2color[1]  =std::make_tuple( 30, 144, 250 ); // water
+      label2color[8]  =std::make_tuple(220, 20,  60  ); // person
+      label2color[7]  =std::make_tuple( 0, 0,142     ); // car
+      label2color[9]  =std::make_tuple(119, 11, 32   ); // bike
+      label2color[11] =std::make_tuple(123, 104, 238 ); // stair
+      label2color[0]  =std::make_tuple(255, 255, 255 ); // background
       
     }
     
@@ -94,7 +116,10 @@ namespace segmentation_projection {
                             const sensor_msgs::ImageConstPtr& color_msg,
                             const sensor_msgs::CameraInfoConstPtr& camera_info_msg);
     void Depth2PointCloud1(const sensor_msgs::ImageConstPtr& depth_msg,
-                           const sensor_msgs::ImageConstPtr& color_msg);
+                           const sensor_msgs::ImageConstPtr& color_msg,
+                           bool publish_semantic,
+                           const cv::Mat & label_img,
+                           const cv::Mat & distribution_img);
     void Depth2PointCloud2(const sensor_msgs::ImageConstPtr& depth_msg,
                            const sensor_msgs::ImageConstPtr& color_msg);
 
@@ -116,7 +141,7 @@ namespace segmentation_projection {
 
     int num_skip_frames;
     std::unique_ptr<tfInference> tf_infer;
-   
+    std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
   };
 
   template <unsigned int NUM_CLASS>
@@ -135,7 +160,7 @@ namespace segmentation_projection {
     cv_bridge::CvImagePtr color_ptr;
     cv_bridge::CvImagePtr depth_ptr;
     try{
-      color_ptr = cv_bridge::toCvCopy(color_msg, sensor_msgs::image_encodings::BGR8);
+      color_ptr = cv_bridge::toCvCopy(color_msg, sensor_msgs::image_encodings::RGB8);
       depth_ptr = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_16UC1);
     } catch (cv_bridge::Exception& e) {
       ROS_ERROR("cv_bridge exception: %s", e.what());
@@ -144,11 +169,14 @@ namespace segmentation_projection {
     cv::Mat color = color_ptr->image;
     cv::Mat depth = depth_ptr->image;
 
-    
+    cv::Mat label_output, distribution_output;
+    tf_infer->segmentation(color, 20, label_output, distribution_output);
+
+      
     // Update camera model
     this->model_.fromCameraInfo(camera_info_msg);
 
-    Depth2PointCloud1(depth_msg, color_msg);
+    Depth2PointCloud1(depth_msg, color_msg, true, label_output, distribution_output);
     Depth2PointCloud2(depth_msg, color_msg);
 
   }
@@ -158,7 +186,11 @@ namespace segmentation_projection {
   template <unsigned int NUM_CLASS>
   inline void
   StereoSegmentation<NUM_CLASS>::Depth2PointCloud1(const sensor_msgs::ImageConstPtr& depth_msg,
-                                                   const sensor_msgs::ImageConstPtr& color_msg) {
+                                                   const sensor_msgs::ImageConstPtr& color_msg,
+                                                   bool publish_semantic,
+                                                   const cv::Mat & label_img,
+                                                   const cv::Mat & distribution_img) {
+                                                  
     
     // Set up to-publish cloud msg
     sensor_msgs::PointCloud::Ptr cloud_msg(new sensor_msgs::PointCloud);
@@ -172,7 +204,7 @@ namespace segmentation_projection {
     sensor_msgs::ChannelFloat32 b_channel;
     b_channel.name = "b";
 
-    sensor_msgs::ChannelFloat32 distribution_channel;
+    sensor_msgs::ChannelFloat32 distribution_channel[NUM_CLASS];
 
     // Use correct principal point from camera info
     float center_x = model_.cx();
@@ -189,6 +221,12 @@ namespace segmentation_projection {
     const uint8_t* color = &color_msg->data[0];
     int color_step = 3;  // 1 if mono
     int color_skip = color_msg->step - color_msg->width * color_step;
+
+    cv::Mat distribution_exp;
+    if (publish_semantic){
+      //cv::cv2eigen(distribution_img, distribution_exp);
+      cv::exp(distribution_img, distribution_exp);
+    }
 
     // Iterate through depth image
     int i = 0;  // num of point
@@ -210,14 +248,47 @@ namespace segmentation_projection {
 
       cloud_msg->points.push_back(p);
 
-      // Fill in r g b channels: bgr
-      r_channel.values.push_back(color[0]);
-      g_channel.values.push_back(color[1]);
-      b_channel.values.push_back(color[2]);
+      if (publish_semantic) {
 
-      // Fill in semantics
-      label_channel.values.push_back(1);
-      distribution_channel.values.push_back(1);
+        // Fill in semantics
+        cv::Mat dist_cv =distribution_exp(cv::Rect(u, v, 1, 1));
+        //cv::Vec<float, 20> dist_cv = distribution_exp.at<cv::Vec<float, 20>>(u, v);
+        Eigen::VectorXf dist;
+        //Eigen::Map<Eigen::Matrix<float, 20, 1> > eigenT( dist_cv.data );
+        //dist = eigenT;
+        cv::cv2eigen(dist_cv, dist);
+        //Eigen::VectorXf dist = distribution_exp(u, v);
+        Eigen::VectorXf dist_class = dist.segment(0, NUM_CLASS);
+        Eigen::VectorXf dist_background = dist.segment(NUM_CLASS, dist.size()-NUM_CLASS);
+        //assume background is 0
+        float sum_background = dist_background.sum() + dist_class(0);
+        dist_class(0) = sum_background;
+        float sum_all_exp = dist_class.sum();
+        dist_class = (dist_class / sum_all_exp).eval();
+        for (int i = 0; i < NUM_CLASS; i++) {
+          distribution_channel[i].values.push_back( dist_class(i) );
+        }
+        
+        int32_t label = dist_class.maxCoeff()-1;        
+        label_channel.values.push_back(label);
+        r_channel.values.push_back(std::get<0>(label2color[label]));
+        g_channel.values.push_back(std::get<1>(label2color[label]));
+        b_channel.values.push_back(std::get<2>(label2color[label]));
+
+        
+      } else {
+        // Fill in r g b channels: bgr
+        r_channel.values.push_back(color[0]);
+        g_channel.values.push_back(color[1]);
+        b_channel.values.push_back(color[2]);
+        // Fill in semantics
+        label_channel.values.push_back(1);
+        distribution_channel[0].values.push_back(1);
+        for (int i = 1; i < NUM_CLASS; i++) {
+          distribution_channel[i].values.push_back(0);
+        }
+      }
+
 
 
     }
@@ -230,7 +301,8 @@ namespace segmentation_projection {
     cloud_msg->channels.push_back(r_channel);
     cloud_msg->channels.push_back(g_channel);
     cloud_msg->channels.push_back(b_channel);
-    cloud_msg->channels.push_back(distribution_channel);
+    for (int i = 0; i < NUM_CLASS; i++)
+      cloud_msg->channels.push_back(distribution_channel[i]);
 
     
     pc1_publisher_.publish(cloud_msg);

@@ -2,7 +2,9 @@
 Project lidar points into camera frame, and then label them according to the pixel class predicted by the neural nets.
 
 # dependencies
-`ros_numpy`, `tensorflow-gpu-1.8.0`, `python-opencv`, `cuda-9.0`, `python-pcl`, `pcl`
+python: `ros_numpy`, `tensorflow-gpu-1.8.0`, `python-opencv`, `cuda-9.0`, `python-pcl`, `pcl`
+
+C++: `pcl-1.8.0`
 
 # launch
 `roslaunch segmentation_projection nclt.launch`

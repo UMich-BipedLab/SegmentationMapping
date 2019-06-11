@@ -112,6 +112,7 @@ namespace segmentation_projection {
     status = TF_NewStatus();
 
     // read the trained frozen graph.pb file
+    std::cout<<"Read graph...\n";
     TF_Buffer* buffer = ReadBufferFromFile( frozen_tf_graph.c_str() );
     graph_def = TF_NewGraph();
     TF_ImportGraphDefOptions* opts = TF_NewImportGraphDefOptions();
