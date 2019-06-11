@@ -203,7 +203,7 @@ namespace segmentation_projection {
 
   void tfInference::segmentation(const cv::Mat & rgb, int num_class,
                                  cv::Mat & label_output, cv::Mat & distribution_output) {
-    TF_Status* status = TF_NewStatus();
+
     // cv::mat assumes rgb!!
     /*
     assert (rgb.rows <= 400 || rgb.cols <= 800);
