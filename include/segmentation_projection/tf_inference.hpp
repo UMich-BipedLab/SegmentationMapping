@@ -203,7 +203,6 @@ namespace segmentation_projection {
 
   void tfInference::segmentation(const cv::Mat & rgb, int num_class,
                                  cv::Mat & label_output, cv::Mat & distribution_output) {
-
     // cv::mat assumes rgb!!
     /*
     assert (rgb.rows <= 400 || rgb.cols <= 800);
@@ -272,19 +271,33 @@ namespace segmentation_projection {
     cv::Mat out_label_img(input_shape[1], input_shape[2], CV_32SC1, label_img_flat);
     out_label_img.convertTo(label_output, CV_8UC1);
     cv::Mat out_distribution_img(input_shape[1], input_shape[2], CV_32FC(num_class), distribution_flat);
-    distribution_output = out_distribution_img;
+    distribution_output = out_distribution_img.clone();
 
     if (rgb.rows > out_label_img.rows || rgb.cols > out_label_img.cols) {
       cv::resize(label_output, label_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN  );
       cv::resize(distribution_output, distribution_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN   );
     }
+    /*
+    cv::Mat out_label_original(label_img.dim_size(1), label_img.dim_size(2) , CV_32FC1, label_img);
+    if (input_shape[1] > rgb.rows || input_shape[2] > rgb.cols) {
+      int diff_width = - rgb.cols + input_shape[2];
+      int diff_height = - rgb.rows + input_shape[1];
+      cv::Mat pRoi = out_label_original(cv::Rect(diff_width / 2, diff_height / 2, rgb.cols, rgb.rows));
+      pRoi.copyTo(*out_label_img);
+    }
+    else
+      out_label_original.copyTo(*out_label_img);
+    */
     
   //
     //cv::namedWindow( "Display window", CV_WINDOW_AUTOSIZE );// Create a window for display.
     //cv::imshow( "Display window", out_label_img);                   // Show our image inside it.
     //cv::waitKey(0);
     //cv::imwrite("label.png", label_output);
-    
+
+    TF_DeleteTensor(input_img_tensor[0]);
+    TF_DeleteTensor(output_tensors[0]);
+    TF_DeleteTensor(output_tensors[1]);
     
 
     return;
