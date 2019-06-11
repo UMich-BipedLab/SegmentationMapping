@@ -2,11 +2,13 @@
 Do segmentation on pointcloud, and build the Semantic Octomap 
 
 # dependencies
-`ros_numpy`, `tensorflow-gpu-1.8.0`, `python-opencv`, `cuda-9.0`, `python-pcl`, `pcl`
+`ros_numpy`, `tensorflow-gpu-1.8.0`, `python-opencv`, `cuda-9.0`, `python-pcl`, `pcl`,
 `Octomap`
 
 # launch
-`roslaunch segmentation_projection nclt.launch`
+Do segmentation on pointcloud: `roslaunch segmentation_projection nclt_distribution_deeplab.launch`
+
+Build semantic Octomap: `roslaunch segmentation_projection nclt_labeled_pc_map.launch`
 
 # parameters in the launch file
 *  `bagfile`: The path of the bag file
