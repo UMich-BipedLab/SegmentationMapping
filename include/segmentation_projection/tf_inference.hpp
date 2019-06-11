@@ -243,9 +243,9 @@ namespace segmentation_projection {
     TF_Output  outputs[2] = { {output_label_op , 0},
                               {output_distribution_op, 0} };
 
-    std::cout<<"Input data type is "<<TF_OperationOutputType(inputs[0])<<", shape is "<<input_shape[1]<<","<< input_shape[2] <<std::endl;
+    //std::cout<<"Input data type is "<<TF_OperationOutputType(inputs[0])<<", shape is "<<input_shape[1]<<","<< input_shape[2] <<std::endl;
 
-    std::cout<<"Output label data type is "<<TF_OperationOutputType(outputs[0])<<", distribution data type is "<<TF_OperationOutputType(outputs[1])<<std::endl;
+    //std::cout<<"Output label data type is "<<TF_OperationOutputType(outputs[0])<<", distribution data type is "<<TF_OperationOutputType(outputs[1])<<std::endl;
     
     
     // neural net inference
@@ -261,7 +261,7 @@ namespace segmentation_projection {
       std::cerr<<"Neural network infer fails\n";
       return;
     }
-    std::cout<<"Output distribution size is  "<<TF_TensorByteSize(output_tensors[1])<<" bytpes, # of bytes per pixel is "<<TF_TensorByteSize(output_tensors[1]) / input_shape[1] / input_shape[2] <<  std::endl;
+    //std::cout<<"Output distribution size is  "<<TF_TensorByteSize(output_tensors[1])<<" bytpes, # of bytes per pixel is "<<TF_TensorByteSize(output_tensors[1]) / input_shape[1] / input_shape[2] <<  std::endl;
 
       
     
@@ -278,23 +278,12 @@ namespace segmentation_projection {
       cv::resize(label_output, label_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN  );
       cv::resize(distribution_output, distribution_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN   );
     }
-    /*
-    cv::Mat out_label_original(label_img.dim_size(1), label_img.dim_size(2) , CV_32FC1, label_img);
-    if (input_shape[1] > rgb.rows || input_shape[2] > rgb.cols) {
-      int diff_width = - rgb.cols + input_shape[2];
-      int diff_height = - rgb.rows + input_shape[1];
-      cv::Mat pRoi = out_label_original(cv::Rect(diff_width / 2, diff_height / 2, rgb.cols, rgb.rows));
-      pRoi.copyTo(*out_label_img);
-    }
-    else
-      out_label_original.copyTo(*out_label_img);
-    */
     
   //
     //cv::namedWindow( "Display window", CV_WINDOW_AUTOSIZE );// Create a window for display.
     //cv::imshow( "Display window", out_label_img);                   // Show our image inside it.
     //cv::waitKey(0);
-    cv::imwrite("label.png", label_output);
+    //cv::imwrite("label.png", label_output);
     
     
 
