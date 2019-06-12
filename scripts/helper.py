@@ -85,3 +85,7 @@ def is_out_of_bound_rotated(u, v):
 def softmax(dist_arr):
     exps = np.exp(dist_arr)
     return exps/np.sum(exps)
+
+def softmax_img(dist_arr):
+    exps = np.exp(dist_arr)
+    return exps/np.sum(exps)
