@@ -3,11 +3,10 @@
 <launch>
   <param name="use_sim_time" value="true"/>
 
-  <arg name="pc_bag_file" default="/media/biped/Cassie/bagfiles/2019-04-27/2019-04-27-14-38-10.bag" /> 
+<!--  <arg name="pc_bag_file" default="/media/biped/Cassie/bagfiles/2019-04-27/2019-04-27-14-38-10.bag" /> -->
   <!--<arg name="pc_bag_file" default="/home/biped/bagfiles/2019-06-10/belltower_test.bag" />   -->
-   <node pkg="rosbag" type="play" name="bagplayer" output="screen" args="--clock  -s 100 -q $(arg pc_bag_file)"/>  
-
-  <!--<include file="$(find cassie_controllers)/launch/display.launch">-->
+  <?ignore <node pkg="rosbag" type="play" name="bagplayer" output="screen" args="--clock  -q $(arg pc_bag_file)"/>  ?>
+  
   
   
   <!-- Visualize in rviz -->
@@ -16,7 +15,7 @@
   <!-- <rosparam file="$(find segmentation_projection)/data/nclt_04_29/label2color.yaml" command="load"/> -->
 
 
-  <node pkg="segmentation_projection" type="segmentation_node" name="segmentation_node" output="log" required="true">
+  <node pkg="segmentation_projection" type="segmentation_node" name="segmentation_node" output="screen" required="true">
     <param name="neural_net_graph" type="str" value="$(find segmentation_projection)/config/optimized_mobilenet_const_nclt_2019_06_11.pb"/>
     <param name="network_image_input_tensor" type="str" value="import/network/input/Placeholder:0"/>
     <param name="network_distribution_output_tensor" type="str" value="import/network/upscore_8s/upscore8/upscore8/BiasAdd:0"/>
@@ -36,7 +35,7 @@
   
     
   <!-- Painting point cloud -->
-  <?ignore
+
   <node pkg="segmentation_projection" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen" required="true">
 
       
@@ -60,9 +59,9 @@
     <param name="octomap_resolution" type="double" value="0.1" />
     <param name="octomap_prob_hit" type="double" value="0.53" />
     <param name="octomap_prob_miss" type="double" value="0.3" />
-    <param name="octomap_occupy_thresh" type="double" value="0.52" />
+    <param name="octomap_occupy_thresh" type="double" value="0.4" />
   </node>
-  ?>
+
   
 
 

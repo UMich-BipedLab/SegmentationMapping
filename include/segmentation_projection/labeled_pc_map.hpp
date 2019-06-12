@@ -123,11 +123,11 @@ namespace segmentation_projection {
       if (occupancy_grid_enabled_) {
         occupancy_grid_ptr_ = std::make_shared<nav_msgs::OccupancyGrid>(nav_msgs::OccupancyGrid());
         // set up occupancy grid info
-        occupancy_grid_ptr_->info.resolution = 1.0;
-        occupancy_grid_ptr_->info.width = 200;
-        occupancy_grid_ptr_->info.height = 200;
-        occupancy_grid_ptr_->info.origin.position.x = -100.0;
-        occupancy_grid_ptr_->info.origin.position.y = -100.0;
+        occupancy_grid_ptr_->info.resolution = 0.1;
+        occupancy_grid_ptr_->info.width = 1000;
+        occupancy_grid_ptr_->info.height = 1000;
+        occupancy_grid_ptr_->info.origin.position.x = -50.0;
+        occupancy_grid_ptr_->info.origin.position.y = -50.0;
         occupancy_grid_ptr_->info.origin.position.z = 0.0;
         occupancy_grid_ptr_->info.origin.orientation.x = 0.0;
         occupancy_grid_ptr_->info.origin.orientation.y = 0.0;
@@ -141,7 +141,8 @@ namespace segmentation_projection {
       if (octomap_enabled_) {
         // create label map
         label2color[2]  =std::make_tuple(250, 250, 250 ); // road
-        label2color[3]  =std::make_tuple(128, 64,  128 ); // sidewalk
+        //label2color[3]  =std::make_tuple(128, 64,  128 ); // sidewalk
+        label2color[3]  =std::make_tuple(250, 250,  250 ); // sidewalk
         label2color[5]  =std::make_tuple(250, 128, 0   ); // building
         label2color[10] =std::make_tuple(192, 192, 192 ); // pole
         label2color[12] =std::make_tuple(250, 250, 0   ); // sign
@@ -157,8 +158,8 @@ namespace segmentation_projection {
 
 
         octree_ptr_ = std::make_shared<octomap::SemanticOcTree>(octomap::SemanticOcTree(octomap_resolution_,
-                                                                   NUM_CLASS,
-                                                                   label2color));
+                                                                                        NUM_CLASS,
+                                                                                        label2color));
         octomap_publisher_ = pnh.advertise<octomap_msgs::Octomap>("octomap_out", 10);
         octree_ptr_->setOccupancyThres(0.52);
         double prob_hit = 0.5, prob_miss = 0.5;
@@ -306,14 +307,14 @@ namespace segmentation_projection {
 
       if (occupancy_grid_enabled_) {
         int map_index = MAP_IDX(occupancy_grid_ptr_->info.width,
-                                int(x-occupancy_grid_ptr_->info.origin.position.x),
-                                int(y-occupancy_grid_ptr_->info.origin.position.y));
+                                int( (x-occupancy_grid_ptr_->info.origin.position.x) /  occupancy_grid_ptr_->info.resolution ),
+                                int( (y-occupancy_grid_ptr_->info.origin.position.y) /  occupancy_grid_ptr_->info.resolution)) ;
 
         if (map_index < occupancy_grid_ptr_->info.width * occupancy_grid_ptr_->info.height) {
           //std::cout << "x: " << x << std::endl;
           //std::cout << "y: " << y << std::endl;
           //std::cout << "map index: " << map_index;
-          if (z < 2.0 && p.label == 3)
+          if (z < 2.0 && (p.label == 3 || p.label == 2) )
             occupancy_grid_ptr_->data[map_index] = 0;
           else
             occupancy_grid_ptr_->data[map_index] = 100;
@@ -519,7 +520,11 @@ namespace segmentation_projection {
           sums += p_seg.label_distribution[c];
           //std::cout<<p_seg.label_distribution[c]<<std::endl;
         }
-        assert(sums > 0.99 & sums < 1.01);
+        //if (sums < 0.99 || sums > 1.01) {
+          //std::cout<<sums<<std::endl;
+        //  continue;
+        //}
+        
       }
     
       pointcloud_pcl.push_back(p);
@@ -572,7 +577,7 @@ namespace segmentation_projection {
 
     // produce the color octomap. 
     if (this->octomap_enabled_ || this->color_octomap_enabled_) {
-      this->add_pc_to_octomap(pointcloud_seg,T_map2body_eigen, true, "", cloud_msg->header.stamp);
+      this->add_pc_to_octomap(pointcloud_seg,T_map2body_eigen, true, false, cloud_msg->header.stamp);
       this->octomap_frame_counter_++;
       //if (this->octomap_frame_counter_ == this->octomap_num_frames_) {
         //octree_ptr_->write("semantic_octree.ot");

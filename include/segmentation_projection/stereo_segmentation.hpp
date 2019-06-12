@@ -52,7 +52,7 @@ namespace tf_ops = tensorflow::ops;
 namespace segmentation_projection {
 
   typedef message_filters::sync_policies::ApproximateTime
-  <sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo> sync_pol;
+  <sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::Image, ImageLabelDistribution> sync_pol;
   
   template <unsigned int NUM_CLASS>
   class StereoSegmentation {
@@ -60,17 +60,17 @@ namespace segmentation_projection {
     StereoSegmentation()
       : nh_() {
       ros::NodeHandle pnh("~");
-
+      std::cout<<"Test\n";
       // init the message filter for image, depth, camera info
-      color_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/camera/color/image_raw", 1);
-      depth_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/camera/aligned_depth_to_color/image_raw", 1);
-      depth_cam_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo> (pnh, "/camera/aligned_depth_to_color/camera_info", 1);
-      label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/labeled_image", 1);
-      distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, "/distribution_image", 1);
-      //sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(20000), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
-      //sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3, _4, _5));
-      sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(10), *depth_sub_, *color_sub_, *depth_cam_sub_);
-      sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3));
+      color_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/camera/color/image_raw", 50);
+      depth_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/camera/aligned_depth_to_color/image_raw", 50);
+      depth_cam_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo> (pnh, "/camera/aligned_depth_to_color/camera_info", 50);
+      label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/labeled_image", 10);
+      distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, "/distribution_image", 10);
+      sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(300), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
+      sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3, _4, _5));
+      //sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(500), *depth_sub_, *color_sub_, *depth_cam_sub_);
+      //sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3));
       
       pc1_publisher_ = pnh.advertise<sensor_msgs::PointCloud>("/labeled_pointcloud", 1);
       pc2_publisher_ = pnh.advertise<sensor_msgs::PointCloud2>("/labeled_pointcloud_color_pc2", 1);
@@ -93,7 +93,7 @@ namespace segmentation_projection {
       ROS_DEBUG_STREAM("Init tensorflow and revoke frozen graph from "<<frozen_graph_path);
       */
       label2color[2]  =std::make_tuple(250, 250, 250 ); // road
-      label2color[3]  =std::make_tuple(128, 64,  128 ); // sidewalk
+      label2color[3]  =std::make_tuple(250, 250, 250 ); // sidewalk
       label2color[5]  =std::make_tuple(250, 128, 0   ); // building
       label2color[10] =std::make_tuple(192, 192, 192 ); // pole
       label2color[12] =std::make_tuple(250, 250, 0   ); // sign
@@ -116,10 +116,6 @@ namespace segmentation_projection {
       delete depth_cam_sub_;
     }
 
-    void ColorDepthCallback(const sensor_msgs::ImageConstPtr& color_msg,
-                            const sensor_msgs::CameraInfoConstPtr& color_camera_info,
-                            const sensor_msgs::ImageConstPtr& depth_msg,
-                            const sensor_msgs::CameraInfoConstPtr& depth_camera_info);
     void DepthColorCallback(const sensor_msgs::ImageConstPtr& depth_msg,
                             const sensor_msgs::ImageConstPtr& color_msg,
                             const sensor_msgs::CameraInfoConstPtr& camera_info_msg);
@@ -181,7 +177,7 @@ namespace segmentation_projection {
                                                     const sensor_msgs::ImageConstPtr& labeled_msg,
                                                     const ImageLabelDistributionConstPtr & distribution_msg) {
 
-    std::cout<<"DepthColorCallback: New callback\n";
+    std::cout<<"DepthColorCallback: New callback"<< depth_msg->header.frame_id <<"\n";
     // Check for bad inputs
     if (depth_msg->header.frame_id != color_msg->header.frame_id) {
       ROS_ERROR("Depth iamge frame id [%s] doesn't match color image frame id [%s]",
@@ -209,9 +205,12 @@ namespace segmentation_projection {
     
     //float * buffer = new float [distribution_msg->distribution.data.layout.dims[0].stride];
     std::vector<float> data = distribution_msg->distribution.data;
+   
     //  TensorMap<Tensor<int, 4>> t_4d(storage, 2, 4, 2, 8);
     //Eigen::Map<Eigen::MatrixXf> mat(data.data(), h, w);
-    cv::Mat distribution_output = cv::Mat(rows, cols, CV_32FC(uint32_t(distribution_msg->distribution.layout.dim[2].size)), data.data()).clone();
+    //cv::Mat distribution_output = cv::Mat(rows, cols, CV_32FC(uint32_t(distribution_msg->distribution.layout.dim[2].size)), distribution_msg->distribution.data).clone();
+    cv::Mat distribution_output = cv::Mat(rows, cols, CV_32FC(NUM_CLASS), const_cast<float*>(distribution_msg->distribution.data.data())).clone();
+    std::cout<<"distribution.data size "<<distribution_output.total() * distribution_output.elemSize()<<std::endl;
     
     //tf_infer->segmentation(color, 20, label_output, distribution_output);
     
@@ -268,7 +267,9 @@ namespace segmentation_projection {
     cv::Mat distribution_exp;
     if (publish_semantic){
       //cv::cv2eigen(distribution_img, distribution_exp);
-      cv::exp(distribution_img, distribution_exp);
+      distribution_exp  = distribution_img;
+      //cv::exp(distribution_img, distribution_exp);
+      std::cout<<"elemSize: "<<distribution_exp.elemSize()<<", total "<<distribution_exp.total()<<", channels "<<distribution_exp.channels()<<std::endl;
     }
 
     // Iterate through depth image
@@ -295,7 +296,12 @@ namespace segmentation_projection {
 
         // Fill in semantics
         //cv::Mat dist_cv =distribution_exp(cv::Rect(u, v, 1, 1));
-        cv::Vec<float, NUM_CLASS> dist_class = distribution_exp.at<cv::Vec<float, NUM_CLASS>>(u, v);
+        cv::Vec<float, NUM_CLASS> dist_class = distribution_exp.at<cv::Vec<float, NUM_CLASS>>(v, u);
+        float sums = cv::sum(dist_class)[0];
+        if (sums < 0.99 || sums > 1.01) {
+
+          std::cerr<<"Wrong sum out of range: "<<sums<<std::endl;
+        }
         //Eigen::VectorXf dist;
         //Eigen::Map<Eigen::Matrix<float, 20, 1> > eigenT( dist_cv.data );
         //dist = eigenT;
@@ -320,7 +326,8 @@ namespace segmentation_projection {
           distribution_channel[i].values.push_back( dist_class(i) );
         }
         
-        int32_t label = max_ind;        
+        int label = max_ind;
+        //std::cout<<"label is "<<label<<std::endl;
         label_channel.values.push_back(label);
         r_channel.values.push_back(std::get<0>(label2color[label]));
         g_channel.values.push_back(std::get<1>(label2color[label]));
@@ -370,6 +377,7 @@ namespace segmentation_projection {
    // Set up to-publish cloud msg
    sensor_msgs::PointCloud2::Ptr cloud_msg (new sensor_msgs::PointCloud2);
    cloud_msg->header = depth_msg->header;  // use depth image time stamp
+   
    cloud_msg->height = depth_msg->height;
    cloud_msg->width = depth_msg->width;
    cloud_msg->is_dense = false;
