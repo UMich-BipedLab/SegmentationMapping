@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+
+<launch>
+  <param name="use_sim_time" value="true"/>
+
+  <!-- <arg name="pc_bag_file" default="/home/biped/seagate/bagfiles2/2019-04-13/2019-04-27-14-38-10.bag " /> -->
+  <arg name="pc_bag_file" default="/home/biped/bagfiles/2019-06-10/belltower_test.bag" />  
+  <node pkg="rosbag" type="play" name="bagplayer" output="screen" args="--clock -r 0.1 -q $(arg pc_bag_file)"/>  
+
+  
+  <!-- Visualize in rviz -->
+  <!--<node pkg="rviz" type="rviz" name="rviz"  />-->
+
+  <!-- <rosparam file="$(find segmentation_projection)/data/nclt_04_29/label2color.yaml" command="load"/> -->
+
+
+  <node pkg="segmentation_projection" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="log" required="true" launch-prefix="xterm -e gdb --args" >
+    <remap from="~color_camera_image" to="/camera/color/image_raw" />
+    <remap from="~color_camera_info" to="/camera/color/camera_info" />
+    <remap from="~depth_camera_image" to="/camera/aligned_depth_to_color/image_raw" />
+    <remap from="~depth_camera_info" to="/camera/aligned_depth_to_color/camera_info" />
+
+    <remap from="~cloud_out1" to="/labeled_pointcloud"/>
+    <remap from="~cloud_out2" to="/labeled_pointcloud_color_pc2"/>
+
+    <param name="skip_every_k_frame" type="int" value="1" />
+    <param name="tf_frozen_graph_path" type="str" value="$(find segmentation_projection)/config/optimized_mobilenet_const_nclt_2019_06_11.pb"/>
+    <param name="tf_input_tensor" type="str" value="network/input/Placeholder"/>
+    <param name="tf_distribution_output_tensor" type="str" value="network/upscore_8s/upscore8/upscore8/BiasAdd"/>
+    <param name="tf_label_output_tensor" type="str" value="network/output/ArgMax"/>
+
+    
+  </node>
+  
+  
+    
+  <!-- Painting point cloud -->
+  <node pkg="segmentation_projection" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen" required="true">
+
+      
+    <remap from="~cloud_in" to="/stereo_segmentation_node/cloud_out1" />
+    <remap from="~cloud_out" to="/labeled_pointcloud_pc2" />
+
+    <param name="painting_enabled" type="bool" value="true" />
+    <param name="distribution_enabled" type="bool" value="true" />
+    <param name="static_frame"  type="string" value="/odom" />
+    <param name="body_frame"  type="string" value="/camera_color_optical_frame" />
+    <param name="stacking_visualization_enabled" type="bool" value="false" />
+    <param name="path_visualization_enabled" type="bool" value="true" />
+    <param name="save_pcd_enabled" type="bool" value="false" />
+    <param name="color_octomap_enabled" type="bool" value="true" />
+    <param name="occupancy_grid_enabled" type="bool" value="true" />
+
+    <!-- for semantic octomap generation -->
+    <param name="octomap_enabled" type="bool" value="false"/>
+    <param name="octomap_num_frames" type="int" value="3000" />
+    <param name="octomap_max_dist" type="int" value="10" />
+    <param name="octomap_resolution" type="double" value="0.1" />
+    <param name="octomap_prob_hit" type="double" value="0.53" />
+    <param name="octomap_prob_miss" type="double" value="0.3" />
+    <param name="octomap_occupy_thresh" type="double" value="0.52" />
+  </node>
+
+  
+
+
+</launch>

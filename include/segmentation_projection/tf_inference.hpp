@@ -120,8 +120,8 @@ namespace segmentation_projection {
     TF_DeleteImportGraphDefOptions(opts);
     TF_DeleteBuffer(buffer);
     if (TF_GetCode(status) != TF_OK) {
-      TF_DeleteStatus(status);
-      TF_DeleteGraph(graph_def);
+      //TF_DeleteStatus(status);
+      //TF_DeleteGraph(graph_def);
       std::cerr << "Can't import GraphDef" << frozen_tf_graph <<std::endl;
       return;
     }

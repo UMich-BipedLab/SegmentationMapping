@@ -5,7 +5,16 @@ project(segmentation_projection)
 add_compile_options(-std=c++11)
 SET(CMAKE_BUILD_TYPE Debug)
 
+SET(ENV{TENSORFLOW_SOURCE_DIR} "/home/biped/thirdparty/tensorflow/")
+SET(ENV{TENSORFLOW_BUILD_DIR}  "/home/biped/thirdparty/tensorflow/build_docker/")
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+
+
+#find_package(TensorFlow REQUIRED)
+#TensorFlow_REQUIRE_C_LIBRARY()
+#TensorFlow_REQUIRE_SOURCE()
+#message(${TensorFlow_SOURCE_DIR})
+
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -24,14 +33,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf_conversions
   eigen_conversions
   image_geometry
+  message_generation
 )
-
-SET(TENSORFLOW_SOURCE_DIR /home/biped/thirdparty/tensorflow/)
-SET(TENSORFLOW_BUILD_DIR /home/biped/thirdparty/tensorflow/build_docker/)
-find_package(TensorFlow REQUIRED)
-TensorFlow_REQUIRE_C_LIBRARY()
-TensorFlow_REQUIRE_SOURCE()
-message(${TensorFlow_SOURCE_DIR})
 
 SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 #find_package (Eigen3  REQUIRED )
@@ -92,11 +95,10 @@ catkin_python_setup()
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+ add_message_files(
+   FILES
+   ImageLabelDistribution.msg
+ )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -113,10 +115,10 @@ catkin_python_setup()
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   sensor_msgs
-# )
+ generate_messages(
+   DEPENDENCIES
+   std_msgs
+ )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -150,7 +152,7 @@ catkin_python_setup()
 catkin_package(
   INCLUDE_DIRS include/segmentation_projection
 #  LIBRARIES segmentation_projection
-#  CATKIN_DEPENDS message_filter rospy sensor_msgs
+  CATKIN_DEPENDS message_filters rospy sensor_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -185,8 +187,8 @@ ${OCTOMAP_INCLUDE_DIRS}
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(labeled_pc_map_node src/labeled_pc_map_node.cpp)
-add_executable(nclt_map_node      src/rvsm_nclt_node.cpp)
-add_executable(query_semantic_tree src/query_semantic_tree.cpp)
+#add_executable(nclt_map_node      src/rvsm_nclt_node.cpp)
+#add_executable(query_semantic_tree src/query_semantic_tree.cpp)
 add_executable(stereo_segmentation_node src/stereo_segmentation_node.cpp)
 
 ## Rename C++ executable without prefix
@@ -206,20 +208,20 @@ target_link_libraries(labeled_pc_map_node
   ${PCL_IO_LIBRARIES}
   ${OCTOMAP_LIBRARIES}
 )
-target_link_libraries(nclt_map_node
-  ${catkin_LIBRARIES}
-  ${PCL_COMMON_LIBRARIES}
-  ${PCL_IO_LIBRARIES}
-  ${OCTOMAP_LIBRARIES}
-)
-target_link_libraries(query_semantic_tree
-  ${catkin_LIBRARIES}
-  ${PCL_COMMON_LIBRARIES}
-  ${PCL_IO_LIBRARIES}
-  ${OCTOMAP_LIBRARIES}
-  )
+#target_link_libraries(nclt_map_node
+#  ${catkin_LIBRARIES}
+#  ${PCL_COMMON_LIBRARIES}
+#  ${PCL_IO_LIBRARIES}
+#  ${OCTOMAP_LIBRARIES}
+#)
+#target_link_libraries(query_semantic_tree
+#  ${catkin_LIBRARIES}
+#  ${PCL_COMMON_LIBRARIES}
+#  ${PCL_IO_LIBRARIES}
+#  ${OCTOMAP_LIBRARIES}
+#  )
 target_include_directories(stereo_segmentation_node PRIVATE ${TensorFlow_SOURCE_DIR})
-target_link_libraries(stereo_segmentation_node   PRIVATE TensorFlow_DEP
+target_link_libraries(stereo_segmentation_node   #PRIVATE TensorFlow_DEP
   ${EIGEN_INCLUDE_DIR}
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
@@ -236,7 +238,7 @@ target_link_libraries(stereo_segmentation_node   PRIVATE TensorFlow_DEP
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-   scripts/segmentation_projection_node  scripts/projection.py scripts/gt_pose2bag.py  scripts/helper.py 
+   scripts/segmentation_projection_node  scripts/projection.py scripts/gt_pose2bag.py  scripts/helper.py  scripts/segmentation_node
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 
