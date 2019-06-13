@@ -233,7 +233,7 @@ int main(int argc, char ** argv) {
 
   ros::init(argc, argv, "nclt_map_node");
   ROS_INFO("nclt 14-class pc_painter init....");
-  segmentation_projection::PointCloudPainter<14> painter;
+  SegmentationMapping::PointCloudPainter<14> painter;
 
   std::string seg_pcds(argv[1]); // segmented pcds
   std::string pose_path(argv[2]);

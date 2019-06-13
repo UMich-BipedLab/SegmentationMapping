@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(segmentation_projection)
+project(SegmentationMapping)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -150,7 +150,7 @@ catkin_python_setup()
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include/segmentation_projection
+  INCLUDE_DIRS include/SegmentationMapping
 #  LIBRARIES segmentation_projection
   CATKIN_DEPENDS message_filters rospy sensor_msgs message_runtime
 #  DEPENDS system_lib
@@ -163,7 +163,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
- include/segmentation_projection
+ include/SegmentationMapping
 ${catkin_INCLUDE_DIRS}
 ${PCL_INCLUDE_DIRS}
 ${EIGEN_INCLUDE_DIR}
@@ -220,7 +220,7 @@ target_link_libraries(labeled_pc_map_node
 #  ${PCL_IO_LIBRARIES}
 #  ${OCTOMAP_LIBRARIES}
 #  )
-target_include_directories(stereo_segmentation_node PRIVATE ${TensorFlow_SOURCE_DIR})
+#target_include_directories(stereo_segmentation_node PRIVATE ${TensorFlow_SOURCE_DIR})
 target_link_libraries(stereo_segmentation_node   #PRIVATE TensorFlow_DEP
   ${EIGEN_INCLUDE_DIR}
   ${catkin_LIBRARIES}

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>segmentation_projection</name>
+  <name>SegmentationMapping</name>
   <version>0.0.0</version>
-  <description>The segmentation_projection package</description>
+  <description>The SegmentationMapping package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

@@ -9,7 +9,8 @@ background = 255
 # RGB
 label_to_color = {                                                                                                              
     2: (250,250,250), # road
-    3: (128, 64,128), # sidewalk
+    #3: (128, 64,128), # sidewalk
+    3: (250, 250, 250), # sidewalk
     5: (250,128,0), # building
     10: (192,192,192), # pole
     12: (250,250,0 ), # traffic sign
