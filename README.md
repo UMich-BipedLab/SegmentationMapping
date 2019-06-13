@@ -1,5 +1,6 @@
-# segmentation_projection
-Project lidar points into camera frame, and then label them according to the pixel class predicted by the neural nets.
+# SegmentationMapping
+a) Label pointcloud with trained neural nets graph.pb
+b) Build Semantic maps
 
 # dependencies
 python: `ros_numpy`, `tensorflow-gpu-1.8.0`, `python-opencv`, `cuda-9.0`, `python-pcl`, `pcl`
