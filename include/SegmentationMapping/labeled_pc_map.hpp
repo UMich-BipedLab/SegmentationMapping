@@ -31,6 +31,7 @@
 #include <fstream>
 #include <memory>
 #include <unordered_map>
+#include <queue>
 #include <tuple>
 #include <boost/make_shared.hpp>
 
@@ -74,6 +75,7 @@ namespace SegmentationMapping {
       , path_visualization_enabled_(true)
       , color_octomap_enabled_(true)
       , occupancy_grid_enabled_(false)
+      , cost_map_enabled_(false)
       , octomap_enabled_(false)
       , octomap_resolution_(0.1)
         //, octree_ptr_(new octomap::ColorOcTree(0.1))
@@ -92,6 +94,7 @@ namespace SegmentationMapping {
       pnh.getParam("path_visualization_enabled", path_visualization_enabled_);
       pnh.getParam("color_octomap_enabled", color_octomap_enabled_);
       pnh.getParam("occupancy_grid_enabled", occupancy_grid_enabled_);
+      pnh.getParam("cost_map_enabled", cost_map_enabled_);
       pnh.getParam("octomap_enabled", octomap_enabled_);
       pnh.getParam("octomap_num_frames", octomap_num_frames_);
       pnh.getParam("octomap_max_dist", octomap_max_dist_);
@@ -135,8 +138,28 @@ namespace SegmentationMapping {
         occupancy_grid_ptr_->info.origin.orientation.w = 1.0;
         occupancy_grid_ptr_->data.resize(occupancy_grid_ptr_->info.width * occupancy_grid_ptr_->info.height);
         std::fill(occupancy_grid_ptr_->data.begin(), occupancy_grid_ptr_->data.end(), -1);
-        occupancy_grid_publisher_ = pnh.advertise<nav_msgs::OccupancyGrid>("occupancy_grid", 1, true);
+        occupancy_grid_publisher_ = pnh.advertise<nav_msgs::OccupancyGrid>("occupancy_grid", 10);
       }
+
+
+      if (cost_map_enabled_) {
+        cost_map_ptr_ = std::make_shared<nav_msgs::OccupancyGrid>(nav_msgs::OccupancyGrid());
+        // set up info
+        cost_map_ptr_->info.resolution = 1.0;
+        cost_map_ptr_->info.width = 200;
+        cost_map_ptr_->info.height = 200;
+        cost_map_ptr_->info.origin.position.x = -100.0;
+        cost_map_ptr_->info.origin.position.y = -100.0;
+        cost_map_ptr_->info.origin.position.z = 0.0;
+        cost_map_ptr_->info.origin.orientation.x = 0.0;
+        cost_map_ptr_->info.origin.orientation.y = 0.0;
+        cost_map_ptr_->info.origin.orientation.z = 0.0;
+        cost_map_ptr_->info.origin.orientation.w = 1.0;
+        cost_map_ptr_->data.resize(cost_map_ptr_->info.width * cost_map_ptr_->info.height);
+        std::fill(cost_map_ptr_->data.begin(), cost_map_ptr_->data.end(), 126);
+        cost_map_publisher_ = pnh.advertise<nav_msgs::OccupancyGrid>("cost_map", 10);
+      }
+
 
       if (octomap_enabled_) {
         // create label map
@@ -195,6 +218,7 @@ namespace SegmentationMapping {
     bool path_visualization_enabled_;
     bool color_octomap_enabled_;
     bool occupancy_grid_enabled_;
+    bool cost_map_enabled_;
     bool octomap_enabled_;
 
     // for voxel grid map
@@ -218,6 +242,11 @@ namespace SegmentationMapping {
     // for occupancy grid map
     std::shared_ptr<nav_msgs::OccupancyGrid> occupancy_grid_ptr_;
     ros::Publisher occupancy_grid_publisher_;
+    std::shared_ptr<nav_msgs::OccupancyGrid> cost_map_ptr_;
+    ros::Publisher cost_map_publisher_;
+    std::queue<int> grids_queue_;
+    std::vector<int> find_neighbors(int index, int width, int height);
+    void update_cost_map();
 
 
     // for semantic octomap
@@ -277,6 +306,80 @@ namespace SegmentationMapping {
   }
 
   template<unsigned int NUM_CLASS>
+  inline std::vector<int>
+  PointCloudPainter<NUM_CLASS>::find_neighbors(int index, int width, int height) {
+    std::vector<int> neighbors{index-width-1, index-width, index-width+1,
+                               index-1, index+1,
+                               index+width-1, index+width, index+width+1};
+    for (auto it = neighbors.begin(); it != neighbors.end(); ) {
+      if ((*it >= 0) && ( *it < width * height))
+        ++it;
+      else
+        it = neighbors.erase(it);
+    }
+    return neighbors;
+  }
+
+
+  template<unsigned int NUM_CLASS>
+  inline void
+  PointCloudPainter<NUM_CLASS>::update_cost_map() {
+    std::queue<int> grids_queue;
+    std::vector<float> distance;
+    distance.resize(cost_map_ptr_->info.width * cost_map_ptr_->info.height);
+
+    // Initialize distance
+    for (int i = 0; i < occupancy_grid_ptr_->info.width * occupancy_grid_ptr_->info.height; ++i) {
+      if (occupancy_grid_ptr_->data[i] > 0)  // occupied
+        distance[i] = 0.0f;
+      else
+        distance[i] = std::numeric_limits<float>::infinity();
+    }
+    
+    for (int i = 0; i < occupancy_grid_ptr_->info.width * occupancy_grid_ptr_->info.height; ++i) {
+      if (distance[i] == 0) {
+        std::vector<int> neighbors = find_neighbors(i, occupancy_grid_ptr_->info.width, occupancy_grid_ptr_->info.height);
+        for (auto it = neighbors.begin(); it != neighbors.end(); ++it) {
+          if (distance[*it] == std::numeric_limits<float>::infinity())
+            grids_queue.push(*it);
+        }
+      }
+    }
+
+    while(!grids_queue.empty()) {
+      int grid = grids_queue.front();
+      grids_queue.pop();
+      if (distance[grid] == std::numeric_limits<float>::infinity()) {
+        std::vector<int> neighbors = find_neighbors(grid, occupancy_grid_ptr_->info.width, occupancy_grid_ptr_->info.height);
+        float min = std::numeric_limits<float>::infinity();
+        bool found_min = false;
+        for (auto it = neighbors.begin(); it != neighbors.end(); ++it) {
+          if (distance[*it] < min) {
+            min = distance[*it];
+            found_min = true;
+          }
+          if (distance[*it] == std::numeric_limits<float>::infinity())
+            grids_queue.push(*it);
+        }
+
+        //std::cout << "queue size: " << grids_queue.size() << std::endl;
+        if (found_min)
+          distance[grid] = 1 + min;
+      }
+    }
+    
+    // Write distance to cost map
+    for (int i = 0; i < cost_map_ptr_->info.width * cost_map_ptr_->info.height; ++i) {
+      if (distance[i] <= 126)
+        cost_map_ptr_->data[i] = (int8_t) distance[i];
+      else
+        cost_map_ptr_->data[i] = 126;
+    }
+  }
+
+  
+
+  template<unsigned int NUM_CLASS>
   inline void
   PointCloudPainter<NUM_CLASS>::add_pc_to_octomap(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc_rgb,
                                                   const Eigen::Affine3d & T_map2body_eigen,
@@ -316,12 +419,11 @@ namespace SegmentationMapping {
           //std::cout << "map index: " << map_index;
           if (z < 2.0 && (p.label == 3 || p.label == 2) )
             occupancy_grid_ptr_->data[map_index] = 0;
-          else
+          else {
             occupancy_grid_ptr_->data[map_index] = 100;
+          }
         }
       }
-
-
 
       if (octomap_enabled_) {
         if (is_update_occupancy)
@@ -356,6 +458,14 @@ namespace SegmentationMapping {
       occupancy_grid_ptr_->header.frame_id = this->static_frame_;
       occupancy_grid_ptr_->header.stamp = stamp;
       occupancy_grid_publisher_.publish(*occupancy_grid_ptr_); 
+    }
+
+    if (cost_map_enabled_) {
+      update_cost_map();
+      std::cout << "publishing cost map\n";
+      cost_map_ptr_->header.frame_id = this->static_frame_;
+      cost_map_ptr_->header.stamp = stamp;
+      cost_map_publisher_.publish(*cost_map_ptr_); 
     }
 
     if (octomap_enabled_){
