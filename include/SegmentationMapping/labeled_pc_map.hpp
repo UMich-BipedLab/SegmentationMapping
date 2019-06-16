@@ -410,11 +410,17 @@ namespace SegmentationMapping {
           //std::cout << "x: " << x << std::endl;
           //std::cout << "y: " << y << std::endl;
           //std::cout << "map index: " << map_index;
-          if (z < 2.0 && (p.label == 3 || p.label == 2) )
-            occupancy_grid_ptr_->data[map_index] = 0;
-          else {
-            occupancy_grid_ptr_->data[map_index] = 100;
-          }
+          
+	  if (p.label != 3 && p.label != 2)
+	    occupancy_grid_ptr_->data[map_index] = 100;  // occupied
+	  else
+	    occupancy_grid_ptr_->data[map_index] = 0;  // free
+
+	  //if (z < 2.0 && (p.label == 3 || p.label == 2) )
+           // occupancy_grid_ptr_->data[map_index] = 0;
+          //else {
+           // occupancy_grid_ptr_->data[map_index] = 100;
+          //}
         }
       }
 

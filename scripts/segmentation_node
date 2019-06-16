@@ -129,16 +129,15 @@ class SegmentationNode:
 
         num_class = self.network_config.num_classes
 
-        if rgb_img.shape[0] != self.network_config.input_height or \
-           rgb_img.shape[1] != self.network_config.input_width:
-            rgb = cv2.resize(rgb_img, \
-                             dsize=(self.network_config.input_width, self.network_config.input_height),\
-                             interpolation=cv2.INTER_CUBIC)
-            
-        else:
-            rgb = rgb_img
+        #if rgb_img.shape[0] != self.network_config.input_height or \
+        #   rgb_img.shape[1] != self.network_config.input_width:
+        #    rgb = cv2.resize(rgb_img, \
+        #                     dsize=(self.network_config.input_width, self.network_config.input_height),\
+        #                     interpolation=cv2.INTER_CUBIC)
+        #else:
+        #    rgb = rgb_img
         
-        #rgb = rgb_img 
+        rgb = rgb_img 
         rgb = np.expand_dims(rgb, axis=0)
         
         label_out, dist_out = self.sess.run([self.y, self.dist], feed_dict={self.x: rgb})
@@ -150,7 +149,7 @@ class SegmentationNode:
 
         dist_exp = np.exp(dist_out)
         dist_class = dist_exp
-        dist_class = zoom(dist_exp, (1.2, 640.0/800 , 1)).astype(np.float32)
+        #dist_class = zoom(dist_exp, (1.2, 640.0/800 , 1)).astype(np.float32)
         dist_sum = np.sum(dist_class, axis=2, keepdims=1)
 
         dist_class = dist_class / dist_sum
@@ -159,11 +158,11 @@ class SegmentationNode:
         dist_class = dist_class[:, :, :num_class]
         dist_class[:,:,0] += background_sum
         assert(np.sum(dist_class[1,1,:]) > 0.99 and np.sum(dist_class[1,1,:]) < 1.01)
-        label_img = np.argmax(dist_class, axis=2) #.astype(np.uint8)
+        label_img = np.argmax(dist_class, axis=2).astype(np.uint8)
         print (label_img.dtype)
-        label_img = cv2.resize(label_img, \
-                         dsize=(rgb_img.shape[1], rgb_img.shape[0]),\
-                               interpolation=cv2.INTER_NEAREST).astype(np.uint8)
+        #label_img = cv2.resize(label_img, \
+        #                 dsize=(rgb_img.shape[1], rgb_img.shape[0]),\
+        #                       interpolation=cv2.INTER_NEAREST).astype(np.uint8)
 
 
         print(label_img.shape, dist_class.shape)        
