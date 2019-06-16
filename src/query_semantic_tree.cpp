@@ -6,8 +6,9 @@
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
+#include <string>
 #include <boost/filesystem.hpp>
-
+#include <pcl/io/pcd_io.h>
 #include <pcl/common/transforms.h>
 
 #include <octomap/SemanticOcTree.h>
@@ -78,7 +79,7 @@ std::unordered_map<uint64_t, std::vector<double>> ReadPointCloudPoses(std::strin
     std::stringstream ss(pose_line);
     uint64_t t;
     ss >> t;
-    uint64_t time = (uint64_t) (std::round((double)t / 1000.0) + 0.1);
+    //uint64_t time = (uint64_t) (std::round((double)t / 1000.0) + 0.1);
     
     std::vector<double> pose;
     for (int i = 0; i < 12; ++i) {
@@ -86,7 +87,7 @@ std::unordered_map<uint64_t, std::vector<double>> ReadPointCloudPoses(std::strin
       ss >> ele;
       pose.push_back(ele);
     }
-    time2pose[time] = pose;
+    time2pose[t] = pose;
   }
   return time2pose;
 }
@@ -133,24 +134,30 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr read_nclt_pc_file(const std::string & filena
 
 int main(int argc, char** argv) {
 
-  // Read semantic octree from tree file
-  std::string tree_file = "/home/biped/.ros/prior_octree_with_distribution.ot";
-  std::cout << "Read semantic tree from " << tree_file << "\n";
-  AbstractOcTree* read_tree = AbstractOcTree::read(tree_file);
-  SemanticOcTree* read_semantic_tree = dynamic_cast<SemanticOcTree*> (read_tree);
-
   // Read pc poses
-  std::string pose_file = "/home/biped/perl_code/workspace/src/segmentation_projection/data/nclt_04_29/pose_sequence.txt";
+  std::string pose_file = "/home/biped/perl_code/workspace/src/segmentation_projection/data/nclt_04_29/pose_sequence_16.txt";
   std::unordered_map<uint64_t, std::vector<double>> time2pose = ReadPointCloudPoses(pose_file);
   std::cout << "Read poses size: " << time2pose.size() << std::endl;
 
   // Read gt times
-  std::string time_file = "/home/biped/perl_code/rvsm/nclt_may23_gt/gt_times.txt";
-  std::ifstream time_in(time_file);
-  std::string time_line;
-  std::string seq_path("/home/biped//perl_code/gicp/visualization/data/rvm_04_29/");
+  //std::string time_file = "/home/biped/perl_code/rvsm/nclt_may23_gt/gt_times.txt";
+  //std::ifstream time_in(time_file);
+  //std::string time_line;
+  //std::string seq_path("/home/biped//perl_code/gicp/visualization/data/");
+
+  std::string seg_pcds("/home/biped/perl_code/workspace/src/segmentation_projection/data/nclt_04_29/seg_pcds_downsampled/");
+  std::string seg_pcds_global("/home/biped/perl_code/workspace/src/segmentation_projection/data/nclt_04_29/seg_pcds_downsampled_global/");
   
-  while (std::getline(time_in, time_line)) {
+
+  std::vector<fs::path> pcds;
+  for(auto& entry : fs::directory_iterator(seg_pcds ) ) 
+    pcds.push_back(entry.path());
+  std::sort(pcds.begin(), pcds.end());
+
+  for (int i = 1; i < pcds.size() ; i++) {
+    //while (std::getline(time_in, time_line)) {
+
+    /*
     std::stringstream ss(time_line);
     uint64_t time;
     ss >> time;
@@ -161,7 +168,22 @@ int main(int argc, char** argv) {
     }
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr pc = read_nclt_pc_file(csv_file);
-    std::cout << "Process " << pc->size() << " points at time " << time << std::endl;
+    */
+    //std::cout << "Process " << pc->size() << " points at time " << time << std::endl;
+
+
+    
+    std::string name = pcds[i].string();
+
+    pcl::PointCloud<pcl::PointSegmentedDistribution<14>>::Ptr pc(new pcl::PointCloud<pcl::PointSegmentedDistribution<14>>);
+    pcl::io::loadPCDFile<pcl::PointSegmentedDistribution<14>> (  name , *pc);    
+
+    
+    std::istringstream iss(name.substr(name.size()-20, 16 ) );
+    uint64_t time;
+    iss >> time;
+    std::cout<<"processing time "<<time<<std::endl;
+    
     Eigen::Matrix4d T;
     T.setIdentity();
     for (int r=0; r<3; ++r){
@@ -171,12 +193,14 @@ int main(int argc, char** argv) {
     }
     Eigen::Affine3d aff(T.matrix());
 
-
     // Transform point cloud to global coordinates
-    pcl::PointCloud<pcl::PointXYZ>::Ptr global_pc(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::transformPointCloud (*pc, *global_pc, T);
-    QueryPointCloudSemantics(read_semantic_tree, global_pc, csv_file);
+    pcl::PointCloud<pcl::PointSegmentedDistribution<14>>::Ptr global_pc(new pcl::PointCloud<pcl::PointSegmentedDistribution<14> >);
+    pcl::transformPointCloud<pcl::PointSegmentedDistribution<14>> (*pc, *global_pc, T);
+
+    pcl::io::savePCDFile(seg_pcds_global + "/" + std::to_string(time) + ".pcd" , *global_pc );
+    //QueryPointCloudSemantics(read_semantic_tree, global_pc, csv_file);
   }
+  return 0;
 }
   
 

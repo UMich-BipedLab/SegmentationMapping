@@ -36,7 +36,7 @@ with tf.Session(graph=G,config=config) as sess:
     #d = G.get_tensor_by_name('import/ResizeBilinear_2:0')
     tf.global_variables_initializer().run()
 
-    img = np.ones((1, 400, 800, 3), dtype=np.uint8)
+    img = np.ones((1, 640, 480, 3), dtype=np.uint8)
 
     # Experiment should be repeated in order to get an accurate value for the inference time and FPS.
     for _ in tqdm(range(args.iterations)):

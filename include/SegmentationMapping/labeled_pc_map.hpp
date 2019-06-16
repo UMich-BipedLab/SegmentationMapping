@@ -127,10 +127,10 @@ namespace SegmentationMapping {
         occupancy_grid_ptr_ = std::make_shared<nav_msgs::OccupancyGrid>(nav_msgs::OccupancyGrid());
         // set up occupancy grid info
         occupancy_grid_ptr_->info.resolution = 0.1;
-        occupancy_grid_ptr_->info.width = 1000;
-        occupancy_grid_ptr_->info.height = 1000;
-        occupancy_grid_ptr_->info.origin.position.x = -50.0;
-        occupancy_grid_ptr_->info.origin.position.y = -50.0;
+        occupancy_grid_ptr_->info.width = 2000;
+        occupancy_grid_ptr_->info.height = 2000;
+        occupancy_grid_ptr_->info.origin.position.x = -100.0;
+        occupancy_grid_ptr_->info.origin.position.y = -100.0;
         occupancy_grid_ptr_->info.origin.position.z = 0.0;
         occupancy_grid_ptr_->info.origin.orientation.x = 0.0;
         occupancy_grid_ptr_->info.origin.orientation.y = 0.0;
@@ -145,16 +145,7 @@ namespace SegmentationMapping {
       if (cost_map_enabled_) {
         cost_map_ptr_ = std::make_shared<nav_msgs::OccupancyGrid>(nav_msgs::OccupancyGrid());
         // set up info
-        cost_map_ptr_->info.resolution = 1.0;
-        cost_map_ptr_->info.width = 200;
-        cost_map_ptr_->info.height = 200;
-        cost_map_ptr_->info.origin.position.x = -100.0;
-        cost_map_ptr_->info.origin.position.y = -100.0;
-        cost_map_ptr_->info.origin.position.z = 0.0;
-        cost_map_ptr_->info.origin.orientation.x = 0.0;
-        cost_map_ptr_->info.origin.orientation.y = 0.0;
-        cost_map_ptr_->info.origin.orientation.z = 0.0;
-        cost_map_ptr_->info.origin.orientation.w = 1.0;
+        cost_map_ptr_->info = occupancy_grid_ptr_->info;
         cost_map_ptr_->data.resize(cost_map_ptr_->info.width * cost_map_ptr_->info.height);
         std::fill(cost_map_ptr_->data.begin(), cost_map_ptr_->data.end(), 126);
         cost_map_publisher_ = pnh.advertise<nav_msgs::OccupancyGrid>("cost_map", 10);
