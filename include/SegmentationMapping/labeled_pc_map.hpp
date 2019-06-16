@@ -332,7 +332,9 @@ namespace SegmentationMapping {
     for (int i = 0; i < occupancy_grid_ptr_->info.width * occupancy_grid_ptr_->info.height; ++i) {
       if (occupancy_grid_ptr_->data[i] > 0)  // occupied
         distance[i] = 0.0f;
-      else
+      else if (occupancy_grid_ptr_->data[i] < 0)  // unknown
+        distance[i] = occupancy_grid_ptr_->data[i];
+      else  // free
         distance[i] = std::numeric_limits<float>::infinity();
     }
     
@@ -354,7 +356,7 @@ namespace SegmentationMapping {
         float min = std::numeric_limits<float>::infinity();
         bool found_min = false;
         for (auto it = neighbors.begin(); it != neighbors.end(); ++it) {
-          if (distance[*it] < min) {
+          if (distance[*it] >= 0 && distance[*it] < min) {
             min = distance[*it];
             found_min = true;
           }
