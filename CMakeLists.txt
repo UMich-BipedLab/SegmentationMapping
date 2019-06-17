@@ -36,7 +36,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
-SET(EIGEN_INCLUDE_DIR /usr/include/eigen3)
+#SET(EIGEN_INCLUDE_DIR /usr/include/eigen3)
+SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 #find_package (Eigen3  REQUIRED )
 #IF( NOT EIGEN3_INCLUDE_DIR )
 #    MESSAGE( FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
