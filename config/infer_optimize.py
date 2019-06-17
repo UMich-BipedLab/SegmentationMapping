@@ -24,14 +24,14 @@ config.gpu_options.allow_growth = True
 
 with tf.Session(graph=G,config=config) as sess:
     # The inference is done till the argmax layer on the logits, as the softmax layer is not important.
-    y, = tf.import_graph_def(graph_def, return_elements=['network/output/ArgMax:0'])
+    y, = tf.import_graph_def(graph_def, return_elements=['network/output/ClassDistribution:0'], name='')
     #y, = tf.import_graph_def(graph_def, return_elements=['SemanticPredictions:0'])
     #print('Operations in Graph:')
     #print([op.name for op in G.get_operations()])
-    x = G.get_tensor_by_name('import/network/input/Placeholder:0')
+    x = G.get_tensor_by_name('network/input/Placeholder:0')
     #b = G.get_tensor_by_name('import/network/input/Placeholder_2:0')
-    d = G.get_tensor_by_name("import/network/upscore_8s/upscore8/upscore8/BiasAdd:0")
-    print(d.shape)
+    #d = G.get_tensor_by_name("import/network/upscore_8s/upscore8/upscore8/BiasAdd:0")
+    print(y.shape)
     #x = G.get_tensor_by_name('import/ImageTensor:0')
     #d = G.get_tensor_by_name('import/ResizeBilinear_2:0')
     tf.global_variables_initializer().run()
@@ -42,6 +42,6 @@ with tf.Session(graph=G,config=config) as sess:
     for _ in tqdm(range(args.iterations)):
         start = time.time()
         #out = sess.run(y, feed_dict={x: img, b:False})
-        out = sess.run([y,d], feed_dict={x: img})
+        out = sess.run([y], feed_dict={x: img})
 
 

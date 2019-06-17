@@ -17,7 +17,7 @@
 
   <node pkg="SegmentationMapping" type="segmentation_node" name="segmentation_node" output="screen" required="true">
     <!--<param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/optimized_mobilenet_const_nclt_2019_06_11.pb"/>  -->
-    <param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/mobilenet_nclt/optimized_graph_mobilenet_trt32_2019-06-15.pb"/> 
+    <param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/mobilenet_nclt/optimized_graph_mobilenet_const_2019-06-15.pb"/> 
     <param name="network_image_input_tensor" type="str" value="network/input/Placeholder:0"/>
     <param name="network_distribution_output_tensor" type="str" value="network/output/ClassDistribution:0"/>
     <param name="network_label_output_tensor" type="str" value="network/output/ClassIndexPrediction:0"/>
