@@ -5,9 +5,9 @@ project(SegmentationMapping)
 add_compile_options(-std=c++11)
 SET(CMAKE_BUILD_TYPE Debug)
 
-SET(ENV{TENSORFLOW_SOURCE_DIR} "/home/biped/thirdparty/tensorflow/")
-SET(ENV{TENSORFLOW_BUILD_DIR}  "/home/biped/thirdparty/tensorflow/build_docker/")
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+#SET(ENV{TENSORFLOW_SOURCE_DIR} "/home/biped/thirdparty/tensorflow/")
+#SET(ENV{TENSORFLOW_BUILD_DIR}  "/home/biped/thirdparty/tensorflow/build_docker/")
+#list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 
 #find_package(TensorFlow REQUIRED)
@@ -36,7 +36,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
-SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
+SET(EIGEN_INCLUDE_DIR /usr/include/eigen3)
 #find_package (Eigen3  REQUIRED )
 #IF( NOT EIGEN3_INCLUDE_DIR )
 #    MESSAGE( FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
@@ -46,7 +46,7 @@ SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(PCL 1.8  REQUIRED)
+find_package(PCL 1.7 REQUIRED)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 message("PCL library path is ")
@@ -181,7 +181,7 @@ ${OCTOMAP_INCLUDE_DIRS}
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -201,6 +201,7 @@ add_executable(stereo_segmentation_node src/stereo_segmentation_node.cpp)
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+add_dependencies(stereo_segmentation_node ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
 target_link_libraries(labeled_pc_map_node
   ${catkin_LIBRARIES}
