@@ -38,8 +38,8 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 
-#SET(EIGEN_INCLUDE_DIR /usr/include/eigen3)
-SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
+SET(EIGEN_INCLUDE_DIR /usr/include/eigen3)
+#SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 #find_package (Eigen3  REQUIRED )
 #IF( NOT EIGEN3_INCLUDE_DIR )
 #    MESSAGE( FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
@@ -49,7 +49,7 @@ SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(PCL 1.8 REQUIRED)
+find_package(PCL REQUIRED)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 message("PCL library path is ")
