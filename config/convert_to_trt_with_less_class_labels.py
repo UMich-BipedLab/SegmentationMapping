@@ -37,40 +37,40 @@ with tf.Session(graph=G,config=config) as sess:
     d = G.get_tensor_by_name("network/upscore_8s/upscore8/upscore8/BiasAdd:0")
 
     distribution_sliced = d[:, :, :, :new_num_class]
-    class_prob_tensor = tf.nn.softmax(distribution_sliced, name='network/output/ClassProbability')
-    label_tensor = tf.argmax(class_prob_tensor, axis=-1, name='network/output/ClassIndexPrediction')
+    class_prob_tensor = tf.nn.softmax(distribution_sliced, name='network/output/ClassDistribution')
+    label_tensor = tf.argmax(class_prob_tensor, axis=-1, name='network/output/ClassIndexPrediction', output_type=tf.int32)
     
     print("tensorrt graph conversion...")
     trt_graph = trt.create_inference_graph(
         input_graph_def=tf.get_default_graph().as_graph_def(),
-        outputs=[ 'network/output/ClassProbability', 'network/output/ClassIndexPrediction' ],
+        outputs=[ 'network/output/ClassDistribution', 'network/output/ClassIndexPrediction' ],
         max_batch_size=1,
         max_workspace_size_bytes=2500000000,
         precision_mode=args.precision)
     print('\n\nFinish tensorrt creation, now  import to tensorflow')
     # Import the TensorRT graph into a new graph and run:
-    output_node = tf.import_graph_def(
-        trt_graph,
-        return_elements=[ 'network/output/ClassProbability', 'network/output/ClassIndexPrediction' ])
-
     #print(distribution_sliced.shape)
     #x = G.get_tensor_by_name('import/ImageTensor:0')
     #d = G.get_tensor_by_name('import/ResizeBilinear_2:0')
     #tf.global_variables_initializer().run()
-    
-    G = tf.get_default_graph()
-    G_def = G.as_graph_def()
-    x = G.get_tensor_by_name('network/input/Placeholder:0')
-    class_prob_tensor = G.get_tensor_by_name('network/output/ClassProbability:0')
-    label_tensor = G.get_tensor_by_name('network/output/ClassIndexPrediction:0')
+g_new = tf.Graph()
+with tf.Session(graph=g_new,config=config) as sess2:
+    output_node = tf.import_graph_def(
+    trt_graph,
+    return_elements=[ 'network/output/ClassDistribution', 'network/output/ClassIndexPrediction' ], name='')
+
+
+    x = g_new.get_tensor_by_name('network/input/Placeholder:0')
+    class_prob_tensor = g_new.get_tensor_by_name('network/output/ClassDistribution:0')
+    label_tensor = g_new.get_tensor_by_name('network/output/ClassIndexPrediction:0')
     print('class_prob_tensor.shape is ',class_prob_tensor.shape)
 
     img = np.ones((1, 640, 480, 3), dtype=np.uint8)
-
+    
     # Experiment should be repeated in order to get an accurate value for the inference time and FPS.
-    for _ in tqdm(range(1000)):
+    for _ in tqdm(range(100)):
         start = time.time()
         #out = sess.run(y, feed_dict={x: img, b:False})
-        out = sess.run([label_tensor,class_prob_tensor], feed_dict={x: img})
+        out = sess2.run([label_tensor,class_prob_tensor], feed_dict={x: img})
 
-    tf.io.write_graph(G_def, './', args.trt_optimized_graph, as_text=False)
+    tf.io.write_graph(g_new, './', args.trt_optimized_graph, as_text=False)
