@@ -22,8 +22,8 @@
     <param name="network_distribution_output_tensor" type="str" value="import/network/upscore_8s/upscore8/upscore8/BiasAdd:0"/>
     <param name="network_label_output_tensor" type="str" value="network/output/ArgMax:0"/>
     <param name="num_classes" type="int" value="14" />
-    <param name="neural_net_input_width" type="int" value="800"/>
-    <param name="neural_net_input_height" type="int" value="400"/>
+    <param name="neural_net_input_width" type="int" value="640"/>
+    <param name="neural_net_input_height" type="int" value="480"/>
 
 
   </node>
