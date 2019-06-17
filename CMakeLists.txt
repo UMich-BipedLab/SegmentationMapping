@@ -5,15 +5,16 @@ project(SegmentationMapping)
 add_compile_options(-std=c++11)
 SET(CMAKE_BUILD_TYPE Debug)
 
-#SET(ENV{TENSORFLOW_SOURCE_DIR} "/home/biped/thirdparty/tensorflow/")
-#SET(ENV{TENSORFLOW_BUILD_DIR}  "/home/biped/thirdparty/tensorflow/build_docker/")
-#list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
+SET(ENV{TENSORFLOW_SOURCE_DIR} "/home/biped/thirdparty/tensorflow/")
+SET(ENV{TENSORFLOW_BUILD_DIR}  "/home/biped/thirdparty/tensorflow/build_docker/")
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 
-#find_package(TensorFlow REQUIRED)
-#TensorFlow_REQUIRE_C_LIBRARY()
-#TensorFlow_REQUIRE_SOURCE()
-#message(${TensorFlow_SOURCE_DIR})
+find_package(TensorFlow REQUIRED)
+TensorFlow_REQUIRE_C_LIBRARY()
+TensorFlow_REQUIRE_SOURCE()
+message(${TensorFlow_SOURCE_DIR})
 
 
 ## Find catkin macros and libraries
@@ -37,7 +38,6 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 #SET(EIGEN_INCLUDE_DIR /usr/include/eigen3)
-SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 #find_package (Eigen3  REQUIRED )
 #IF( NOT EIGEN3_INCLUDE_DIR )
 #    MESSAGE( FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
@@ -47,7 +47,7 @@ SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(PCL 1.7 REQUIRED)
+find_package(PCL 1.8 REQUIRED)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 message("PCL library path is ")
@@ -222,12 +222,11 @@ target_link_libraries(labeled_pc_map_node
 #  ${PCL_IO_LIBRARIES}
 #  ${OCTOMAP_LIBRARIES}
 #  )
-#target_include_directories(stereo_segmentation_node PRIVATE ${TensorFlow_SOURCE_DIR})
-target_link_libraries(stereo_segmentation_node   #PRIVATE TensorFlow_DEP
+target_include_directories(stereo_segmentation_node PRIVATE ${TensorFlow_SOURCE_DIR})
+target_link_libraries(stereo_segmentation_node   PRIVATE TensorFlow_DEP
   ${EIGEN_INCLUDE_DIR}
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
-
 )
 
 #############
