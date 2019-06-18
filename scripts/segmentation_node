@@ -53,14 +53,15 @@ class SegmentationNode:
         self.tf_init()
         
         self.labeled_img_pub = rospy.Publisher("/labeled_image",
-                                               Image, queue_size=10)
+                                               Image, queue_size=1)
         self.distribution_pub = rospy.Publisher('/distribution_image',
-                                               ImageLabelDistribution, queue_size=10)
+                                                ImageLabelDistribution, queue_size=1)
         
         self.input_rgb_img_ = message_filters.Subscriber('/camera/color/image_raw',
-                                                        Image,  queue_size=20)
-        self.input_depth_img_ = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image, queue_size=20)
-        ts = message_filters.ApproximateTimeSynchronizer([self.input_rgb_img_, self.input_depth_img_], 20, 0.06)
+                                                        Image,  queue_size=2)
+        self.input_depth_img_ = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image, queue_size=2)
+        #ts = message_filters.ApproximateTimeSynchronizer([self.input_rgb_img_, self.input_depth_img_], 20, 0.06)
+        ts = message_filters.TimeSynchronizer([self.input_rgb_img_, self.input_depth_img_], 3)
         ts.registerCallback(self.callback)
 
         
@@ -71,9 +72,10 @@ class SegmentationNode:
 
         
     def callback(self, img_msg, depth_msg):
-        print("New callback")
+        #now  = rospy.Time.now()
+        #rospy.loginfo("New callback time %i %i, img_time: %i %i, depth_time %i %i", now.secs, now.nsecs, img_msg.header.stamp.secs, img_msg.header.stamp.nsecs, depth_msg.header.stamp.secs, depth_msg.header.stamp.nsecs )
         original_img = self.bridge.imgmsg_to_cv2(img_msg , desired_encoding="rgb8")
-        original_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
+        #original_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
         labeled_img, distribution = self.infer(original_img)
         self.publish_label_and_distribution(labeled_img, distribution, img_msg.header)
         
@@ -123,7 +125,9 @@ class SegmentationNode:
 
         self.labeled_img_pub.publish(label_msg)
         self.distribution_pub.publish(distribution_msg)
-        
+
+        #now  = rospy.Time.now()
+        #rospy.loginfo("End callabck at time %i %i\n\n", now.secs, now.nsecs)
 
     def infer(self, rgb_img):
 
@@ -141,6 +145,9 @@ class SegmentationNode:
         rgb = np.expand_dims(rgb, axis=0)
         
         label_out, dist_out = self.sess.run([self.y, self.dist], feed_dict={self.x: rgb})
+        
+        now  = rospy.Time.now()
+        rospy.loginfo("Net Infer Fin at time %i %i", now.secs, now.nsecs)
 
         dist_out = dist_out[0, :, :, :]
         label_out = label_out[0, :, : ].astype(np.uint8)
@@ -165,6 +172,7 @@ class SegmentationNode:
         #                       interpolation=cv2.INTER_NEAREST).astype(np.uint8)
 
         '''
+
         print(label_out.shape, dist_out.shape)        
         return label_out, dist_out
 
