@@ -32,7 +32,7 @@ with tf.Session(graph=G,config=config) as sess:
     x = G.get_tensor_by_name('network/input/Placeholder:0')
     #b = G.get_tensor_by_name('import/network/input/Placeholder_2:0')
     #d = G.get_tensor_by_name("import/network/upscore_8s/upscore8/upscore8/BiasAdd:0")
-    d = G.get_tensor_by_name("network/output/ClassProbability:0")
+    d = G.get_tensor_by_name("network/output/ClassDistribution:0")
     print(d.shape)
     #x = G.get_tensor_by_name('import/ImageTensor:0')
     #d = G.get_tensor_by_name('import/ResizeBilinear_2:0')

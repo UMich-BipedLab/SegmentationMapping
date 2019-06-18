@@ -14,6 +14,7 @@
 #include <ros/time.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
@@ -51,9 +52,19 @@
 
 namespace SegmentationMapping {
 
+
   typedef message_filters::sync_policies::ExactTime
   <sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::Image, ImageLabelDistribution> sync_pol;
+
+  //typedef message_filters::sync_policies::ApproximateTime
+  //<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::Image, ImageLabelDistribution> sync_pol;
+
   
+  //typedef message_filters::sync_policies::ExactTime
+    //<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::Image, ImageLabelDistribution> sync_pol;
+
+  //  typedef message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::Image, ImageLabelDistribution> sync_pol;
+
   template <unsigned int NUM_CLASS>
   class StereoSegmentation {
   public:
@@ -65,9 +76,16 @@ namespace SegmentationMapping {
       color_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/camera/color/image_raw", 50);
       depth_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/camera/aligned_depth_to_color/image_raw", 50);
       depth_cam_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo> (pnh, "/camera/aligned_depth_to_color/camera_info", 50);
+      //<<<<<<< HEAD
       label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/labeled_image", 2);
       distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, "/distribution_image", 2);
       sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(120), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
+      //=======
+      //label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/labeled_image", 50);
+      //distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, "/distribution_image", 50);
+      //sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(200), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
+      //sync_ = new sync_pol(*depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_, 200);
+
       sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3, _4, _5));
       //sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(500), *depth_sub_, *color_sub_, *depth_cam_sub_);
       //sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3));
@@ -86,7 +104,7 @@ namespace SegmentationMapping {
       pnh.getParam("tf_distribution_output_tensor", output_distribution_tensor_name);
       std::string frozen_graph_path;
       pnh.getParam("tf_frozen_graph_path", frozen_graph_path );
-      ROS_INFO("Init tf_Inference....");
+      ROS_DEBUG("Init tf_Inference....");
       tf_infer.reset(new tfInference(frozen_graph_path, input_tensor_name,
                                    output_label_tensor_name, output_distribution_tensor_name));
       ROS_DEBUG_STREAM("Init tensorflow and revoke frozen graph from "<<frozen_graph_path);
@@ -147,7 +165,9 @@ namespace SegmentationMapping {
     message_filters::Subscriber<sensor_msgs::Image> *label_sub_;
     message_filters::Subscriber<ImageLabelDistribution> *distribution_sub_;
     message_filters::Synchronizer<sync_pol>* sync_;
-    
+    //message_filters::TimeSynchronizer<sync_pol>* sync_;
+    //sync_pol* sync_;
+
     ros::Publisher pc1_publisher_;
     ros::Publisher pc2_publisher_;
     // For camera depth to point cloud
@@ -219,6 +239,15 @@ namespace SegmentationMapping {
                                                     const sensor_msgs::CameraInfoConstPtr& camera_info_msg,
                                                     const sensor_msgs::ImageConstPtr& labeled_msg,
                                                     const ImageLabelDistributionConstPtr & distribution_msg) {
+    ros::Time curr_t = ros::Time::now();
+    ROS_DEBUG_STREAM("Callback starts at time "<<uint32_t(curr_t.toSec())<<". "<<(uint32_t)curr_t.toNSec() );
+    
+    std::cout << "depth: " << depth_msg->header.stamp << std::endl;
+    std::cout << "color: " << color_msg->header.stamp << std::endl;
+    std::cout << "camera_info: " << camera_info_msg->header.stamp << std::endl;
+    std::cout << "labeled_msg: " << labeled_msg->header.stamp << std::endl;
+    std::cout << "distribution_msg: " << distribution_msg->header.stamp << std::endl;
+
 
     std::cout<<"DepthColorCallback: New callback"<< depth_msg->header.frame_id <<"\n";
     // Check for bad inputs
@@ -262,7 +291,15 @@ namespace SegmentationMapping {
     this->model_.fromCameraInfo(camera_info_msg);
 
     Depth2PointCloud1(depth_msg, color_msg, true, label_ptr->image, distribution_output);
-    Depth2PointCloud2(depth_msg, color_msg, false, label_ptr->image);
+
+    //Depth2PointCloud2(depth_msg, color_msg, false, label_ptr->image);
+    
+    // Debugging
+    //Depth2PointCloud2(depth_msg, color_msg, false, label_ptr->image);
+
+    //curr_t = ros::Time::now();
+    //ROS_DEBUG_STREAM("Callback ends at time "<<uint32_t(curr_t.toSec())<<". "<<(uint32_t)curr_t.toNSec() );
+
 
   }
 
@@ -319,6 +356,11 @@ namespace SegmentationMapping {
     int i = 0;  // num of point
     for (int v = 0; v < int(depth_msg->height); ++v, depth_row += row_step, color += color_skip){
       for (int u = 0; u < int(depth_msg->width); ++u, color += color_step, ++i) {
+
+      // Skip the upper half of the image
+      if (v < int(depth_msg->height / 2))
+        continue;
+      
       uint16_t depth = depth_row[u];
 
       // Check for invalid measurements
@@ -458,8 +500,13 @@ namespace SegmentationMapping {
    for (int v = 0 ; v < int(cloud_msg->height); ++v, depth_row += row_step, color += color_skip){
     for (int u = 0; u < int(cloud_msg->width); ++u, color += color_step, 
         ++iter_x, ++iter_y, ++iter_z, ++iter_a, ++iter_r, ++iter_g, ++iter_b) {
-      uint16_t depth = depth_row[u];
+      
+      // Skip the upper half of the image
+      if (v < int(cloud_msg->height / 2))
+        continue;
 
+      uint16_t depth = depth_row[u];
+      
       // Check for invalid measurements
       if (depth <= 0)
         *iter_x = *iter_y = *iter_z = bad_point;
@@ -468,10 +515,10 @@ namespace SegmentationMapping {
         *iter_x = (u - center_x) * depth * constant_x;
         *iter_y = (v - center_y) * depth * constant_y;
         *iter_z = (float) depth * unit_scaling;
+        if (*iter_z > 10)
+        *iter_z = bad_point;
       }
       
-      if (*iter_z > 10)
-        *iter_z = bad_point;
 
       // Fill in color
       //label_channel.values.push_back(label);
