@@ -219,7 +219,7 @@ namespace SegmentationMapping {
     this->model_.fromCameraInfo(camera_info_msg);
 
     Depth2PointCloud1(depth_msg, color_msg, true, label_ptr->image, distribution_output);
-    Depth2PointCloud2(depth_msg, color_msg, true, label_ptr->image);
+    Depth2PointCloud2(depth_msg, color_msg, false, label_ptr->image);
 
   }
 
@@ -276,6 +276,11 @@ namespace SegmentationMapping {
     int i = 0;  // num of point
     for (int v = 0; v < int(depth_msg->height); ++v, depth_row += row_step, color += color_skip){
       for (int u = 0; u < int(depth_msg->width); ++u, color += color_step, ++i) {
+
+      // Skip the upper half of the image
+      if (v < int(depth_msg->height / 2))
+        continue;
+      
       uint16_t depth = depth_row[u];
 
       // Check for invalid measurements
@@ -415,8 +420,13 @@ namespace SegmentationMapping {
    for (int v = 0; v < int(cloud_msg->height); ++v, depth_row += row_step, color += color_skip){
     for (int u = 0; u < int(cloud_msg->width); ++u, color += color_step, 
         ++iter_x, ++iter_y, ++iter_z, ++iter_a, ++iter_r, ++iter_g, ++iter_b) {
-      uint16_t depth = depth_row[u];
+      
+      // Skip the upper half of the image
+      if (v < int(cloud_msg->height / 2))
+        continue;
 
+      uint16_t depth = depth_row[u];
+      
       // Check for invalid measurements
       if (depth <= 0)
         *iter_x = *iter_y = *iter_z = bad_point;
@@ -425,10 +435,10 @@ namespace SegmentationMapping {
         *iter_x = (u - center_x) * depth * constant_x;
         *iter_y = (v - center_y) * depth * constant_y;
         *iter_z = (float) depth * unit_scaling;
+        if (*iter_z > 10)
+        *iter_z = bad_point;
       }
       
-      if (*iter_z > 10)
-        *iter_z = bad_point;
 
       // Fill in color
       //label_channel.values.push_back(label);
