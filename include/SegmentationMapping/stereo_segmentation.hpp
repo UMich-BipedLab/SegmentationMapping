@@ -14,6 +14,7 @@
 #include <ros/time.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
@@ -51,9 +52,14 @@ namespace tf_ops = tensorflow::ops;
 */
 namespace SegmentationMapping {
 
-  typedef message_filters::sync_policies::ApproximateTime
-  <sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::Image, ImageLabelDistribution> sync_pol;
+  //typedef message_filters::sync_policies::ApproximateTime
+  //<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::Image, ImageLabelDistribution> sync_pol;
   
+  //typedef message_filters::sync_policies::ExactTime
+    //<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::Image, ImageLabelDistribution> sync_pol;
+
+  typedef message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::Image, ImageLabelDistribution> sync_pol;
+
   template <unsigned int NUM_CLASS>
   class StereoSegmentation {
   public:
@@ -65,9 +71,10 @@ namespace SegmentationMapping {
       color_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/camera/color/image_raw", 50);
       depth_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/camera/aligned_depth_to_color/image_raw", 50);
       depth_cam_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo> (pnh, "/camera/aligned_depth_to_color/camera_info", 50);
-      label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/labeled_image", 10);
-      distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, "/distribution_image", 10);
-      sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(300), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
+      label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/labeled_image", 50);
+      distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, "/distribution_image", 50);
+      //sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(200), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
+      sync_ = new sync_pol(*depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_, 200);
       sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3, _4, _5));
       //sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(500), *depth_sub_, *color_sub_, *depth_cam_sub_);
       //sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3));
@@ -147,8 +154,10 @@ namespace SegmentationMapping {
     message_filters::Subscriber<sensor_msgs::CameraInfo>* depth_cam_sub_;
     message_filters::Subscriber<sensor_msgs::Image> *label_sub_;
     message_filters::Subscriber<ImageLabelDistribution> *distribution_sub_;
-    message_filters::Synchronizer<sync_pol>* sync_;
-    
+    //message_filters::Synchronizer<sync_pol>* sync_;
+    //message_filters::TimeSynchronizer<sync_pol>* sync_;
+    sync_pol* sync_;
+
     ros::Publisher pc1_publisher_;
     ros::Publisher pc2_publisher_;
     // For camera depth to point cloud
@@ -176,6 +185,15 @@ namespace SegmentationMapping {
                                                     const sensor_msgs::CameraInfoConstPtr& camera_info_msg,
                                                     const sensor_msgs::ImageConstPtr& labeled_msg,
                                                     const ImageLabelDistributionConstPtr & distribution_msg) {
+    ros::Time curr_t = ros::Time::now();
+    ROS_INFO_STREAM("Callback starts at time "<<uint32_t(curr_t.toSec())<<". "<<(uint32_t)curr_t.toNSec() );
+    
+    std::cout << "depth: " << depth_msg->header.stamp << std::endl;
+    std::cout << "color: " << color_msg->header.stamp << std::endl;
+    std::cout << "camera_info: " << camera_info_msg->header.stamp << std::endl;
+    std::cout << "labeled_msg: " << labeled_msg->header.stamp << std::endl;
+    std::cout << "distribution_msg: " << distribution_msg->header.stamp << std::endl;
+
 
     std::cout<<"DepthColorCallback: New callback"<< depth_msg->header.frame_id <<"\n";
     // Check for bad inputs
@@ -219,7 +237,12 @@ namespace SegmentationMapping {
     this->model_.fromCameraInfo(camera_info_msg);
 
     Depth2PointCloud1(depth_msg, color_msg, true, label_ptr->image, distribution_output);
-    Depth2PointCloud2(depth_msg, color_msg, false, label_ptr->image);
+    
+    // Debugging
+    //Depth2PointCloud2(depth_msg, color_msg, false, label_ptr->image);
+
+    curr_t = ros::Time::now();
+    ROS_INFO_STREAM("Callback ends at time "<<uint32_t(curr_t.toSec())<<". "<<(uint32_t)curr_t.toNSec() );
 
   }
 
