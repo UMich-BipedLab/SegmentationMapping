@@ -67,7 +67,7 @@ namespace SegmentationMapping {
       depth_cam_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo> (pnh, "/camera/aligned_depth_to_color/camera_info", 50);
       label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/labeled_image", 2);
       distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, "/distribution_image", 2);
-      sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(150), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
+      sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(120), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
       sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3, _4, _5));
       //sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(500), *depth_sub_, *color_sub_, *depth_cam_sub_);
       //sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3));
