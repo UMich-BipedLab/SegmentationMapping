@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <unsupported/Eigen/CXX11/Tensor>
+
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -49,10 +51,23 @@ namespace segmentation_projection {
     TF_Operation * input_op;
     TF_Operation * output_label_op;
     TF_Operation * output_distribution_op;
-    std::vector<std::int64_t> input_shape;
 
+    
+    std::vector<std::int64_t> raw_network_output_shape;
     std::vector<std::int64_t> get_tensor_dims(TF_Output output) ;
   };
+
+
+
+
+
+  /*******************************************************
+   *
+   *
+   *               Implementations start here
+   *
+   *
+   ****************************************************8**/
 
   std::vector<std::int64_t> tfInference::get_tensor_dims(TF_Output  output) {
     const TF_DataType type = TF_OperationOutputType(output);
@@ -71,9 +86,6 @@ namespace segmentation_projection {
 
   }
 
-  static void DeallocateBuffer(void* data, size_t) {
-    std::free(data);
-  }
 
   static TF_Buffer* ReadBufferFromFile(const char* file) {
 
@@ -147,10 +159,12 @@ namespace segmentation_projection {
       return;
     }
 
-    TF_Output  inputs[1] = {{input_op, 0}};
-    TF_Output  outputs[2] = { {output_label_op , 0},
+
+    
+    //TF_Output  inputs[1] = {{input_op, 0}};
+    TF_Output  outputs[1] = {// {output_label_op , 0},
                               {output_distribution_op, 0} };
-    input_shape = get_tensor_dims(inputs[0]);
+    raw_network_distribution_shape = get_tensor_dims(outputs[0]);
     
 
     /*
@@ -220,16 +234,18 @@ namespace segmentation_projection {
     }
     */
 
-    cv::Mat input_img_data ;
-    cv::resize(rgb, input_img_data, cv::Size(input_shape[2],input_shape[1] ),0, 0 );
+    const cv::Mat input_img_data = rgb;
+    
+    //cv::resize(rgb, input_img_data, cv::Size(input_shape[2],input_shape[1] ),0, 0 );
 
     // setting up input image tensor
     
-    input_img_data.convertTo(input_img_data, CV_32FC3);
+    //input_img_data.convertTo(input_img_data, CV_32FC3);
 
 
     TF_Tensor* input_img_tensor[1];
-    input_img_tensor[0] = data_to_tensor(TF_FLOAT ,
+    std::vector<std::int64_t> input_shape = {1, rgb.rows, rgb.cols, 3};
+    input_img_tensor[0] = data_to_tensor(TF_UINT8,
                                          input_shape.data(), input_shape.size(),
                                          input_img_data.data,
                                          input_img_data.elemSize() * input_img_data.total());
@@ -240,7 +256,7 @@ namespace segmentation_projection {
     
     // setting up input/output 
     TF_Output  inputs[1] = {{input_op, 0}};
-    TF_Output  outputs[2] = { {output_label_op , 0},
+    TF_Output  outputs[1] = { {output_label_op , 0},
                               {output_distribution_op, 0} };
 
     //std::cout<<"Input data type is "<<TF_OperationOutputType(inputs[0])<<", shape is "<<input_shape[1]<<","<< input_shape[2] <<std::endl;
@@ -252,8 +268,8 @@ namespace segmentation_projection {
     TF_Tensor * output_tensors[2];
     TF_SessionRun(tf_sess,
                   nullptr,
-                  inputs, input_img_tensor,1,
-                  outputs, output_tensors,  2,
+                  inputs,  input_img_tensor, 1,
+                  outputs, output_tensors,   2,
                   nullptr, 0, nullptr, status
                   );
 
@@ -265,19 +281,39 @@ namespace segmentation_projection {
 
       
     
-    int32_t * label_img_flat    = static_cast<int32_t *>(TF_TensorData(output_tensors[0]));
+    int32_t * label_img_flat  = static_cast<int32_t *>(TF_TensorData(output_tensors[0]));
     float * distribution_flat = static_cast<float *>(TF_TensorData(output_tensors[1]));
 
     // convert to output cv mat and Eigen Mat
-    cv::Mat out_label_img(input_shape[1], input_shape[2], CV_32SC1, label_img_flat);
-    out_label_img.convertTo(label_output, CV_8UC1);
-    cv::Mat out_distribution_img(input_shape[1], input_shape[2], CV_32FC(num_class), distribution_flat);
-    distribution_output = out_distribution_img.clone();
+    
+    //cv::Mat out_label_img(input_shape[1], input_shape[2], CV_32SC1, label_img_flat);
+    //out_label_img.convertTo(label_output, CV_8UC1);
+    cv::Mat out_distribution_img(rgb.rows, rgb.cols, CV_32FC(raw_network_output_shape[3]), distribution_flat);
+    //distribution_output = out_distribution_img.clone();
 
-    if (rgb.rows > out_label_img.rows || rgb.cols > out_label_img.cols) {
-      cv::resize(label_output, label_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN  );
-      cv::resize(distribution_output, distribution_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN   );
+    
+    // forming an array of matrices is a quite efficient operation,
+    // because the matrix data is not copied, only the headers
+    cv::Mat classes(rgb.rows, rgb.cols, num_class );
+    //    cv::Mat background(rgb.rows, rgb.cols, )
+    // rgba[0] -> bgr[2], rgba[1] -> bgr[1],
+    // rgba[2] -> bgr[0], rgba[3] -> alpha[0]
+    std::vector<int> channel_ind_map(num_class);
+    for (int i = 0; i != num_class; i++) {
+      channel_ind_map[i] = i;
+      channel_ind_map[i+1] = i;
     }
+    cv::mixChannels( out_distribution_img, 1, classes, 1, channel_ind_map.data(), num_class);
+    cv::exp(classes, classes);
+    //if (rgb.rows > out_label_img.rows || rgb.cols > out_label_img.cols) {
+    //   cv::resize(label_output, label_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN  );
+    //  cv::resize(distribution_output, distribution_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN   );
+    //}
+
+    //Eigen::TensorMap<Eigen::Tensor<float, 3>> dist_map(distribution_flat, rgb.rows, rgb.cols, 3);
+    //Eigen::Tensor<float, 3> distribution_tensor = dist_map;
+    //Eigen::Tensor<float, 1> 
+    
     /*
     cv::Mat out_label_original(label_img.dim_size(1), label_img.dim_size(2) , CV_32FC1, label_img);
     if (input_shape[1] > rgb.rows || input_shape[2] > rgb.cols) {

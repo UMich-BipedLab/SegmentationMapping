@@ -118,7 +118,6 @@ class SegmentationNode:
         m_arr.layout.dim[2].stride = self.network_config.num_classes
         m_arr.data = distribution.flatten().tolist()
 
-        print(len(m_arr.data) * 4)
         
         distribution_msg.header = header
         distribution_msg.distribution = m_arr
@@ -151,7 +150,6 @@ class SegmentationNode:
 
         dist_out = dist_out[0, :, :, :]
         label_out = label_out[0, :, : ].astype(np.uint8)
-        print("finish infer "+str(label_out.shape)+", "+ str(dist_out.shape)  )
 
         '''
         dist_exp = np.exp(dist_out)
@@ -173,7 +171,6 @@ class SegmentationNode:
 
         '''
 
-        print(label_out.shape, dist_out.shape)        
         return label_out, dist_out
 
     def spin(self):

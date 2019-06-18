@@ -14,27 +14,27 @@
   <!-- <rosparam file="$(find segmentation_projection)/data/nclt_04_29/label2color.yaml" command="load"/> -->
 
 
-  <node pkg="segmentation_projection" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="log" required="true" launch-prefix="xterm -e gdb --args" >
-    <remap from="~color_camera_image" to="/camera/color/image_raw" />
+  <node pkg="segmentation_projection" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="screen" required="true" launch-prefix="xterm -e gdb --args" >
+<!--    <remap from="~color_camera_image" to="/camera/color/image_raw" />
     <remap from="~color_camera_info" to="/camera/color/camera_info" />
     <remap from="~depth_camera_image" to="/camera/aligned_depth_to_color/image_raw" />
     <remap from="~depth_camera_info" to="/camera/aligned_depth_to_color/camera_info" />
 
     <remap from="~cloud_out1" to="/labeled_pointcloud"/>
-    <remap from="~cloud_out2" to="/labeled_pointcloud_color_pc2"/>
+    <remap from="~cloud_out2" to="/labeled_pointcloud_color_pc2"/> -->
 
     <param name="skip_every_k_frame" type="int" value="1" />
-    <param name="tf_frozen_graph_path" type="str" value="$(find segmentation_projection)/config/optimized_mobilenet_const_nclt_2019_06_11.pb"/>
+    <param name="tf_frozen_graph_path" type="str" value="$(find segmentation_projection)/config/optimized_graph_mobilenet_const_2019-06-15.pb"/>
     <param name="tf_input_tensor" type="str" value="network/input/Placeholder"/>
     <param name="tf_distribution_output_tensor" type="str" value="network/upscore_8s/upscore8/upscore8/BiasAdd"/>
-    <param name="tf_label_output_tensor" type="str" value="network/output/ArgMax"/>
+    <!--<param name="tf_label_output_tensor" type="str" value="network/output/ArgMax"/>-->
 
-    
   </node>
   
   
     
   <!-- Painting point cloud -->
+  <?ignore
   <node pkg="segmentation_projection" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen" required="true">
 
       
@@ -59,7 +59,7 @@
     <param name="octomap_prob_hit" type="double" value="0.53" />
     <param name="octomap_prob_miss" type="double" value="0.3" />
     <param name="octomap_occupy_thresh" type="double" value="0.52" />
-  </node>
+  </node> ?>
 
   
 

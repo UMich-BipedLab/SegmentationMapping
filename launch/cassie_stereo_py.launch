@@ -48,9 +48,9 @@
     <param name="static_frame"  type="string" value="/odom" />
     <param name="body_frame"  type="string" value="/camera_color_optical_frame" />
     <param name="stacking_visualization_enabled" type="bool" value="false" />
-    <param name="path_visualization_enabled" type="bool" value="true" />
+    <param name="path_visualization_enabled" type="bool" value="false" />
     <param name="save_pcd_enabled" type="bool" value="false" />
-    <param name="color_octomap_enabled" type="bool" value="true" />
+    <param name="color_octomap_enabled" type="bool" value="false" />
     <param name="occupancy_grid_enabled" type="bool" value="true" />
     <param name="cost_map_enabled" type="bool" value="true" />
 

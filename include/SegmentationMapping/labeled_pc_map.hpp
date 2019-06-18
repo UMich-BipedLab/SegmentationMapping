@@ -100,7 +100,7 @@ namespace SegmentationMapping {
       pnh.getParam("octomap_max_dist", octomap_max_dist_);
       pnh.getParam("octomap_resolution", octomap_resolution_);
 
-      this->pc_subscriber_ = pnh.subscribe("cloud_in", 100, &PointCloudPainter::PointCloudCallback, this);
+      this->pc_subscriber_ = pnh.subscribe("cloud_in", 1, &PointCloudPainter::PointCloudCallback, this);
 
       this->pc_publisher_ = pnh.advertise<sensor_msgs::PointCloud2>("cloud_out", 10);
 
@@ -293,15 +293,15 @@ namespace SegmentationMapping {
     path_.poses.push_back(pose_stamped);
 
     path_publisher_.publish(path_);
-      
+    
   }
 
   template<unsigned int NUM_CLASS>
   inline std::vector<int>
   PointCloudPainter<NUM_CLASS>::find_neighbors(int index, int width, int height) {
     std::vector<int> neighbors{index-width-1, index-width, index-width+1,
-                               index-1, index+1,
-                               index+width-1, index+width, index+width+1};
+        index-1, index+1,
+        index+width-1, index+width, index+width+1};
     for (auto it = neighbors.begin(); it != neighbors.end(); ) {
       if ((*it >= 0) && ( *it < width * height))
         ++it;
@@ -379,11 +379,12 @@ namespace SegmentationMapping {
                                                   bool is_update_occupancy,
                                                   bool is_write_centroids,
                                                   const ros::Time & stamp) {
-
+  
     pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> transformed_pc;
     pcl::transformPointCloud (pc_rgb, transformed_pc, T_map2body_eigen);
 
     std::cout<<"Add "<<pc_rgb.size()<<" points to octomap \n";
+    if (color_octomap_enabled_)
     for (int i = 0; i < transformed_pc.size(); i++  ) {
       pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
 
@@ -401,6 +402,19 @@ namespace SegmentationMapping {
         color_octree_ptr_->averageNodeColor(x, y, z, r, g, b);
       }
 
+    }
+  
+    ros::Time curr_t = ros::Time::now();
+    ROS_DEBUG_STREAM("Build ColorTree at time "<<uint32_t(curr_t.toSec())<<". "<<uint32_t(curr_t.toNSec()) );
+
+    if (occupancy_grid_enabled_)
+    for (int i = 0; i < transformed_pc.size(); i++  ) {
+      pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
+      float x = p.x;
+      float y = p.y;
+      float z = p.z; // for NCLT only
+      octomap::point3d endpoint ( x,  y, z);
+    
       if (occupancy_grid_enabled_) {
         int map_index = MAP_IDX(occupancy_grid_ptr_->info.width,
                                 int( (x-occupancy_grid_ptr_->info.origin.position.x) /  occupancy_grid_ptr_->info.resolution ),
@@ -411,18 +425,30 @@ namespace SegmentationMapping {
           //std::cout << "y: " << y << std::endl;
           //std::cout << "map index: " << map_index;
           
-	  if (p.label != 3 && p.label != 2)
-	    occupancy_grid_ptr_->data[map_index] = 100;  // occupied
-	  else
-	    occupancy_grid_ptr_->data[map_index] = 0;  // free
+          if (p.label != 3 && p.label != 2)
+            occupancy_grid_ptr_->data[map_index] = 100;  // occupied
+          else
+            occupancy_grid_ptr_->data[map_index] = 0;  // free
 
-	  //if (z < 2.0 && (p.label == 3 || p.label == 2) )
-           // occupancy_grid_ptr_->data[map_index] = 0;
+          //if (z < 2.0 && (p.label == 3 || p.label == 2) )
+          // occupancy_grid_ptr_->data[map_index] = 0;
           //else {
-           // occupancy_grid_ptr_->data[map_index] = 100;
+          // occupancy_grid_ptr_->data[map_index] = 100;
           //}
         }
       }
+    }
+
+    ros::Time curr_t2 = ros::Time::now();
+    ROS_DEBUG_STREAM("Build occupancy grid at time "<<uint32_t(curr_t2.toSec())<<". "<<(uint32_t)curr_t2.toNSec() );
+
+    if (octomap_enabled_ )
+    for (int i = 0; i < transformed_pc.size(); i++  ) {
+      pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
+      float x = p.x;
+      float y = p.y;
+      float z = p.z; // for NCLT only
+      octomap::point3d endpoint ( x,  y, z);
 
       if (octomap_enabled_) {
         if (is_update_occupancy)
@@ -441,6 +467,11 @@ namespace SegmentationMapping {
       }
     }
 
+
+    ros::Time curr_t3 = ros::Time::now();
+    ROS_DEBUG_STREAM("Build Semantic Tree at time "<<uint32_t(curr_t3.toSec())<<". "<<(uint32_t)curr_t3.toNSec() );
+
+    
     if (color_octomap_enabled_) {
       std::cout<<"publishing color octree\n";
       octomap_msgs::Octomap cmap_msg;
@@ -515,6 +546,11 @@ namespace SegmentationMapping {
       bmap_msg.header.stamp = stamp;
       octomap_publisher_.publish(bmap_msg);
     }
+
+    ros::Time curr_t4 = ros::Time::now();
+    ROS_DEBUG_STREAM("Callback ends at time "<<uint32_t(curr_t4.toSec())<<". "<<(uint32_t)curr_t4.toNSec() );
+    std::cout<<"\n";
+
   }
 
   template <unsigned int NUM_CLASS>
@@ -535,8 +571,8 @@ namespace SegmentationMapping {
       add_pc_to_octomap(pc , pose_at_pc, true, is_write_centroids, t );
       this->octomap_frame_counter_++;
       //if (this->octomap_frame_counter_ > this->octomap_num_frames_) {
-        octree_ptr_->write("semantic_octree.ot");
-        //}
+      octree_ptr_->write("semantic_octree.ot");
+      //}
 
     }
 
@@ -575,6 +611,8 @@ namespace SegmentationMapping {
     pcl::PointCloud<pcl::PointXYZRGB> pointcloud_pcl;
     pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS> > pointcloud_seg;
 
+    ros::Time curr_t = ros::Time::now();
+    ROS_DEBUG_STREAM("Callback at time "<<uint32_t(curr_t.toSec())<<". "<<uint32_t(curr_t.toNSec()) );
 
     tf::StampedTransform transform;
 
@@ -630,7 +668,7 @@ namespace SegmentationMapping {
           //std::cout<<p_seg.label_distribution[c]<<std::endl;
         }
         //if (sums < 0.99 || sums > 1.01) {
-          //std::cout<<sums<<std::endl;
+        //std::cout<<sums<<std::endl;
         //  continue;
         //}
         
@@ -640,6 +678,8 @@ namespace SegmentationMapping {
       pointcloud_seg.push_back(p_seg);
       
     }
+    curr_t = ros::Time::now();
+    ROS_DEBUG_STREAM("Build PointSeg at time "<<uint32_t(curr_t.toSec())<<". "<<uint32_t(curr_t.toNSec()) );
 
     // publish pointxyzrgb raw at the current timestamp
     pcl::toROSMsg(pointcloud_pcl, painted_cloud);
@@ -685,11 +725,11 @@ namespace SegmentationMapping {
     }
 
     // produce the color octomap. 
-    if (this->octomap_enabled_ || this->color_octomap_enabled_) {
+    if (this->octomap_enabled_ || this->color_octomap_enabled_ || this->cost_map_enabled_) {
       this->add_pc_to_octomap(pointcloud_seg,T_map2body_eigen, true, false, cloud_msg->header.stamp);
       this->octomap_frame_counter_++;
       //if (this->octomap_frame_counter_ == this->octomap_num_frames_) {
-        //octree_ptr_->write("semantic_octree.ot");
+      //octree_ptr_->write("semantic_octree.ot");
       //}
     }
 

@@ -45,13 +45,13 @@
 #include "SegmentationMapping/ImageLabelDistribution.h"
 //#include "tf_inference.hpp"
 
-/*
-namespace tf = tensorflow;
-namespace tf_ops = tensorflow::ops;
-*/
+
+//namespace tf = tensorflow;
+//namespace tf_ops = tensorflow::ops;
+
 namespace SegmentationMapping {
 
-  typedef message_filters::sync_policies::ApproximateTime
+  typedef message_filters::sync_policies::ExactTime
   <sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::Image, ImageLabelDistribution> sync_pol;
   
   template <unsigned int NUM_CLASS>
@@ -65,9 +65,9 @@ namespace SegmentationMapping {
       color_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/camera/color/image_raw", 50);
       depth_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/camera/aligned_depth_to_color/image_raw", 50);
       depth_cam_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo> (pnh, "/camera/aligned_depth_to_color/camera_info", 50);
-      label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/labeled_image", 10);
-      distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, "/distribution_image", 10);
-      sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(300), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
+      label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, "/labeled_image", 2);
+      distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, "/distribution_image", 2);
+      sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(150), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
       sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3, _4, _5));
       //sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(500), *depth_sub_, *color_sub_, *depth_cam_sub_);
       //sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3));
@@ -78,18 +78,17 @@ namespace SegmentationMapping {
 
       num_skip_frames = pnh.getParam("skip_every_k_frame", num_skip_frames);
 
-
-      // init tensorflow
       /*
+      // init tensorflow
       std::string input_tensor_name, output_distribution_tensor_name, output_label_tensor_name;
       pnh.getParam("tf_input_tensor", input_tensor_name);
-      pnh.getParam("tf_label_output_tensor", output_label_tensor_name);
+      //pnh.getParam("tf_label_output_tensor", output_label_tensor_name);
       pnh.getParam("tf_distribution_output_tensor", output_distribution_tensor_name);
       std::string frozen_graph_path;
       pnh.getParam("tf_frozen_graph_path", frozen_graph_path );
       ROS_INFO("Init tf_Inference....");
-      //tf_infer.reset(new tfInference(frozen_graph_path, input_tensor_name,
-      //                               output_label_tensor_name, output_distribution_tensor_name));
+      tf_infer.reset(new tfInference(frozen_graph_path, input_tensor_name,
+                                   output_label_tensor_name, output_distribution_tensor_name));
       ROS_DEBUG_STREAM("Init tensorflow and revoke frozen graph from "<<frozen_graph_path);
       */
       label2color[2]  =std::make_tuple(250, 250, 250 ); // road
@@ -115,11 +114,11 @@ namespace SegmentationMapping {
       delete depth_sub_;
       delete depth_cam_sub_;
     }
-
+    /*
     void DepthColorCallback(const sensor_msgs::ImageConstPtr& depth_msg,
                             const sensor_msgs::ImageConstPtr& color_msg,
                             const sensor_msgs::CameraInfoConstPtr& camera_info_msg);
-
+    */
                             //const ImageLabelDistributionConstPtr & distribution_msg);
     void DepthColorCallback(const sensor_msgs::ImageConstPtr& depth_msg,
                             const sensor_msgs::ImageConstPtr& color_msg,
@@ -159,7 +158,7 @@ namespace SegmentationMapping {
     //std::unique_ptr<tfInference> tf_infer;
     std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
   };
-
+  /*
   template <unsigned int NUM_CLASS>
   inline void
   StereoSegmentation<NUM_CLASS>::DepthColorCallback(const sensor_msgs::ImageConstPtr& depth_msg,
@@ -167,8 +166,52 @@ namespace SegmentationMapping {
                                                     const sensor_msgs::CameraInfoConstPtr& camera_info_msg){
 
     std::cout<<"invoked\n";
+        std::cout<<"DepthColorCallback: New callback"<< depth_msg->header.frame_id <<"\n";
+    // Check for bad inputs
+    if (depth_msg->header.frame_id != color_msg->header.frame_id) {
+      ROS_ERROR("Depth iamge frame id [%s] doesn't match color image frame id [%s]",
+          depth_msg->header.frame_id.c_str(), color_msg->header.frame_id.c_str());
+      return;
+    }
+    
+    // Get rgb and depth images
+    cv_bridge::CvImagePtr color_ptr;
+    cv_bridge::CvImagePtr depth_ptr;
+    cv_bridge::CvImagePtr label_ptr;
+    try{
+      color_ptr = cv_bridge::toCvCopy(color_msg, sensor_msgs::image_encodings::RGB8);
+      depth_ptr = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_16UC1);
+      label_ptr = cv_bridge::toCvCopy(labeled_msg, sensor_msgs::image_encodings::TYPE_8UC1);
+    } catch (cv_bridge::Exception& e) {
+      ROS_ERROR("cv_bridge exception: %s", e.what());
+      return;
+    }
+    //;cv::Mat color = color_ptr->image;
+    //cv::Mat depth = depth_ptr->image;
+
+    int rows = color_ptr->image.rows;
+    int cols = color_ptr->image.cols;
+    
+    //float * buffer = new float [distribution_msg->distribution.data.layout.dims[0].stride];
+    //std::vector<float> data = distribution_msg->distribution.data;
+   
+    //  TensorMap<Tensor<int, 4>> t_4d(storage, 2, 4, 2, 8);
+    //Eigen::Map<Eigen::MatrixXf> mat(data.data(), h, w);
+    //cv::Mat distribution_output = cv::Mat(rows, cols, CV_32FC(uint32_t(distribution_msg->distribution.layout.dim[2].size)), distribution_msg->distribution.data).clone();
+    //cv::Mat distribution_output = cv::Mat(rows, cols, CV_32FC(NUM_CLASS), const_cast<float*>(distribution_msg->distribution.data.data())).clone();
+    //std::cout<<"distribution.data size "<<distribution_output.total() * distribution_output.elemSize()<<std::endl;
+    
+    tf_infer->segmentation(color, 20, label_output, distribution_output);
+    
+      
+    // Update camera model
+    this->model_.fromCameraInfo(camera_info_msg);
+
+    Depth2PointCloud1(depth_msg, color_msg, true, label_ptr->image, distribution_output);
+    Depth2PointCloud2(depth_msg, color_msg, true, label_ptr->image);
+
   }
-  
+  */
   template <unsigned int NUM_CLASS>
   inline void
   StereoSegmentation<NUM_CLASS>::DepthColorCallback(const sensor_msgs::ImageConstPtr& depth_msg,
@@ -219,7 +262,7 @@ namespace SegmentationMapping {
     this->model_.fromCameraInfo(camera_info_msg);
 
     Depth2PointCloud1(depth_msg, color_msg, true, label_ptr->image, distribution_output);
-    Depth2PointCloud2(depth_msg, color_msg, true, label_ptr->image);
+    Depth2PointCloud2(depth_msg, color_msg, false, label_ptr->image);
 
   }
 
@@ -412,7 +455,7 @@ namespace SegmentationMapping {
    sensor_msgs::PointCloud2Iterator<uint8_t> iter_a(*cloud_msg, "a");
 
    // Iterate through depth image
-   for (int v = 0; v < int(cloud_msg->height); ++v, depth_row += row_step, color += color_skip){
+   for (int v = 0 ; v < int(cloud_msg->height); ++v, depth_row += row_step, color += color_skip){
     for (int u = 0; u < int(cloud_msg->width); ++u, color += color_step, 
         ++iter_x, ++iter_y, ++iter_z, ++iter_a, ++iter_r, ++iter_g, ++iter_b) {
       uint16_t depth = depth_row[u];
