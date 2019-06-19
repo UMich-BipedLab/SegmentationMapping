@@ -7,6 +7,8 @@ python: `ros_numpy`, `tensorflow-gpu-1.8.0`, `python-opencv`, `cuda-9.0`, `pytho
 
 C++: `pcl`, `eigen`
 
+ros: `semantic octomap`: https://github.com/UMich-BipedLab/octomap.git
+
 # launch
 * run on Cassie with stereo camera (Intel Realsense): `roslaunch SegmentationMapping cassie_stereo_py.launch`
 * run nclt dataset: `roslaunch SegmentationMapping nclt_distribution_deeplab.launch`
