@@ -1,13 +1,32 @@
 # SegmentationMapping
 * Label pointcloud from stereo cameras or lidar with Tensorflow trained neural nets graph.pb
 * Build 3D Semantic voxel maps, 2D occupancy maps, 2D obstacle distance maps
+![The Semantic Map build on NCLT dataset](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/octomap.png "NCLT octomap")
 
 ## Pipeline
+Two types of accepted inputs (from ROS topics): 
+* Raw RGBD images from depth cameras, or
+* Lidar scans +  RGB images.
+
+Outputs (in ROS messages):
+* Labeled images, each pixel with a distribution across classes
+* Labeled PointCloud ROS message
+* Semantic Octomap
+* 2D occupancy maps 
+* 2D cost map, cost computed from distance to closest obstacles
+
+![alt text](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/1.png "Pipeline_1")
+![alt text](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/2.png "Pipeline_2")
 
 ## Performance
-
+Tested on
+* AlienWare Laptop (running in realtime for the Cassie Blue experiement): 3FPS on i7-6820, 32GB RAM, GTX1070
+* Dell XPS: 4FPS on i7-7700, 32GB RAM, GTX1070.
+* Jetson Xavier: coming...
 
 ## Dependencies
+ROS
+
 Neural Network: 
 * `tensorflow-gpu-1.8.0` 
 * `cuda-9.0`,
