@@ -1,6 +1,8 @@
 # SegmentationMapping
 * Label pointcloud from stereo cameras or lidar with Tensorflow trained neural nets graph.pb
 * Build 3D Semantic voxel maps, 2D occupancy maps, 2D obstacle distance maps
+
+Here is a semantic map built on NCLT dataset
 ![The Semantic Map build on NCLT dataset](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/octomap.png "NCLT octomap")
 
 ## Pipeline
@@ -25,10 +27,11 @@ Tested on
 * Jetson Xavier: coming...
 
 ## Dependencies
-ROS
+ROS: Tested on Kinetic and Ubuntu 16.04
 
 Neural Network: 
 * `tensorflow-gpu-1.8.0` 
+* `tensorrt4`
 * `cuda-9.0`,
 * `cudnn-7`
 
@@ -60,9 +63,9 @@ ros thirdparty:
 * `cam_intrinsic_0`: the `npy` file containing the intrinsic transformation of 0-th camera. Use `image_[0-9]` to indexing camera topics. Distortion is not taken into account
 * `cam2lidar_file_0`: the `npy` file containing camera to lidar transformation of 0-th camera. Use `image_[0-9]` to indexing camera topics
 * `cam_distortion_0`: the txt file contaning dense map from undistorted images to distorted images for this (0-th in the example) camera
---->
 
-## On NCLT: Generate cam2lidar npy given measured transformation
+
+On NCLT: Generate cam2lidar npy given measured transformation
 `cd config/; python generate_cam2lidar.py`. Note that you have to hand-type in the `[x,y,z, roll, pitch, yawn]` in `generate_cam2lidar.py`
-
+--->
 
