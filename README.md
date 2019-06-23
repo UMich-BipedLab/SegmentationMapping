@@ -7,8 +7,8 @@ Here is a semantic map built on NCLT dataset
 
 ## Pipeline
 Two types of accepted inputs (from ROS topics): 
-* Raw RGBD images from depth cameras, or
-* Lidar scans +  RGB images.
+* Raw RGBD images from depth cameras + /tf published from ROS, or
+* Lidar scans +  RGB images + /tf published from ROS.
 
 Outputs (in ROS messages):
 * Labeled images, each pixel with a distribution across classes
@@ -44,6 +44,9 @@ C++: `pcl`, `eigen`, `OpenCV`
 ros thirdparty: 
 * [`semantic octomap`](https://github.com/UMich-BipedLab/octomap.git): Modified octomap, supporting Bayesian updates for semantic label fusion
 * [`ros_numpy`](https://github.com/eric-wieser/ros_numpy)
+
+## Compiling
+`catkin_make install  -DCMAKE_BUILD_TYPE=Release -Doctomap_DIR=${octomap_source_directory}/lib/cmake/octomap/ --pkg SegmentationMapping`
 
 ## launchfiles
 * run on Cassie with stereo camera (Intel Realsense): `roslaunch SegmentationMapping cassie_stereo_py.launch`
