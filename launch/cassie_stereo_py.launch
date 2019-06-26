@@ -39,7 +39,9 @@
 
   <node pkg="SegmentationMapping" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen" required="true">
 
-      
+    <remap from="/labeled_pc_map_node/occupancy_grid" to="/labeled_pc_map_node/occupancy_grid2" />
+    <remap from="/labeled_pc_map_node/cost_map" to="/labeled_pc_map_node/cost_map2" /> 
+
     <remap from="~cloud_in" to="/labeled_pointcloud" />
     <remap from="~cloud_out" to="/labeled_pointcloud_pc2" />
 
