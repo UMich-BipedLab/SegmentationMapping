@@ -412,35 +412,7 @@ namespace SegmentationMapping {
     ros::Time curr_t = ros::Time::now();
     ROS_DEBUG_STREAM("Build ColorTree at time "<<uint32_t(curr_t.toSec())<<". "<<uint32_t(curr_t.toNSec()) );
 
-    if (occupancy_grid_enabled_) {
-      for (int i = 0; i < transformed_pc.size(); i++  ) {
-        pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
-        float x = p.x;
-        float y = p.y;
-        float z = p.z; // for NCLT only
-        octomap::point3d endpoint ( x,  y, z);
-    
-        int map_index = MAP_IDX(occupancy_grid_ptr_->info.width,
-                                int( (x-occupancy_grid_ptr_->info.origin.position.x) /  occupancy_grid_ptr_->info.resolution ),
-                                int( (y-occupancy_grid_ptr_->info.origin.position.y) /  occupancy_grid_ptr_->info.resolution)) ;
-
-        if (map_index < occupancy_grid_ptr_->info.width * occupancy_grid_ptr_->info.height) {
-          
-          if (p.label != 3 && p.label != 2)
-            occupancy_grid_ptr_->data[map_index] = 100;  // occupied
-          else
-            occupancy_grid_ptr_->data[map_index] = 0;  // free
-            
-          if (occupancy_grid_noise_percent_ > 0.01 &&
-              (*bernoulli_dist)(rand_generator) ) { // flip
-            occupancy_grid_ptr_->data[map_index] = (occupancy_grid_ptr_->data[map_index] == 100)?0:100;                            
-          }
-          
-        }
-
-      }
-    }        
-    
+        
     ros::Time curr_t2 = ros::Time::now();
     ROS_DEBUG_STREAM("Build occupancy grid at time "<<uint32_t(curr_t2.toSec())<<". "<<(uint32_t)curr_t2.toNSec() );
 
@@ -475,7 +447,40 @@ namespace SegmentationMapping {
     ros::Time curr_t3 = ros::Time::now();
     ROS_DEBUG_STREAM("Build Semantic Tree at time "<<uint32_t(curr_t3.toSec())<<". "<<(uint32_t)curr_t3.toNSec() );
 
+    if (occupancy_grid_enabled_) {
+      for (int i = 0; i < transformed_pc.size(); i++  ) {
+        pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
+        float x = p.x;
+        float y = p.y;
+        float z = p.z; // for NCLT only
+        octomap::point3d query ( x,  y, z);
+        octomap::SemanticOcTreeNode* node = octree_ptr_->search(query);
+        if (node != NULL && node->getOccupancy() > 0.5 && node->isSemanticsSet()) {
+          //auto semantics = node->getSemantics();
+          int label = node->getSemanticLabel();
     
+          int map_index = MAP_IDX(occupancy_grid_ptr_->info.width,
+                                  int( (x-occupancy_grid_ptr_->info.origin.position.x) /  occupancy_grid_ptr_->info.resolution ),
+                                  int( (y-occupancy_grid_ptr_->info.origin.position.y) /  occupancy_grid_ptr_->info.resolution)) ;
+
+          if (map_index < occupancy_grid_ptr_->info.width * occupancy_grid_ptr_->info.height) {
+            
+            if (label != 3 && label != 2)
+              occupancy_grid_ptr_->data[map_index] = 100;  // occupied
+            else
+              occupancy_grid_ptr_->data[map_index] = 0;  // free
+              
+            /*if (occupancy_grid_noise_percent_ > 0.01 &&
+                (*bernoulli_dist)(rand_generator) ) { // flip
+              occupancy_grid_ptr_->data[map_index] = (occupancy_grid_ptr_->data[map_index] == 100)?0:100;                            
+            }*/
+            
+          }
+        }
+
+      }
+    }        
+
     if (color_octomap_enabled_) {
       std::cout<<"publishing color octree\n";
       octomap_msgs::Octomap cmap_msg;
