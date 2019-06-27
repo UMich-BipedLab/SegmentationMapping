@@ -437,7 +437,132 @@ namespace SegmentationMapping {
         if (result) {
           //std::cout<<"updateNode success\n";
           octree_ptr_->averageNodeSemantics(result, label_dist );
-        }//else
+          if (p.label == 2 || p.label == 3) {
+            octree_ptr_->averageNodeSemantics(result, label_dist );
+            octree_ptr_->averageNodeSemantics(result, label_dist );
+            octree_ptr_->averageNodeSemantics(result, label_dist );
+            octree_ptr_->averageNodeSemantics(result, label_dist );
+            octree_ptr_->averageNodeSemantics(result, label_dist );
+            octree_ptr_->averageNodeSemantics(result, label_dist );
+            octree_ptr_->averageNodeSemantics(result, label_dist );
+            octree_ptr_->averageNodeSemantics(result, label_dist );
+
+          }
+        }
+        
+        
+        result = octree_ptr_->updateNode(x-octomap_resolution_, y-octomap_resolution_, z-octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x-octomap_resolution_, y-octomap_resolution_, z, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+         result = octree_ptr_->updateNode(x-octomap_resolution_, y-octomap_resolution_, z+octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x-octomap_resolution_, y, z-octomap_resolution_, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+        result = octree_ptr_->updateNode(x-octomap_resolution_, y, z, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x-octomap_resolution_, y, z+octomap_resolution_, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+        result = octree_ptr_->updateNode(x-octomap_resolution_, y+octomap_resolution_, z-octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x-octomap_resolution_, y+octomap_resolution_, z, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+        result = octree_ptr_->updateNode(x-octomap_resolution_, y+octomap_resolution_, z-octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+
+        result = octree_ptr_->updateNode(x, y-octomap_resolution_, z-octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x, y-octomap_resolution_, z, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+         result = octree_ptr_->updateNode(x, y-octomap_resolution_, z+octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x, y, z-octomap_resolution_, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+        result = octree_ptr_->updateNode(x, y, z, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x, y, z+octomap_resolution_, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+        result = octree_ptr_->updateNode(x, y+octomap_resolution_, z-octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x, y+octomap_resolution_, z, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+        result = octree_ptr_->updateNode(x, y+octomap_resolution_, z-octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+     
+
+        result = octree_ptr_->updateNode(x+octomap_resolution_, y-octomap_resolution_, z-octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x+octomap_resolution_, y-octomap_resolution_, z, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+         result = octree_ptr_->updateNode(x+octomap_resolution_, y-octomap_resolution_, z+octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x+octomap_resolution_, y, z-octomap_resolution_, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+        result = octree_ptr_->updateNode(x+octomap_resolution_, y, z, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x+octomap_resolution_, y, z+octomap_resolution_, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+        result = octree_ptr_->updateNode(x+octomap_resolution_, y+octomap_resolution_, z-octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+        
+        result = octree_ptr_->updateNode(x+octomap_resolution_, y+octomap_resolution_, z, true); 
+         if (result)
+        octree_ptr_->averageNodeSemantics(result, label_dist );
+
+        result = octree_ptr_->updateNode(x+octomap_resolution_, y+octomap_resolution_, z-octomap_resolution_, true);
+        if (result)
+         octree_ptr_->averageNodeSemantics(result, label_dist );
+
+
+        //else
          // std::cout<<"updatNode fails\n";
 
       }
