@@ -61,10 +61,14 @@ message(${PCL_LIBRARY_DIRS})
 
 find_package(octomap REQUIRED)
 include_directories(${OCTOMAP_INCLUDE_DIRS})
-link_directories(${OCTOMAP_LIBRARY_DIRS})
-message(${OCTOMAP_INCLUDE_DIRS})
+link_libraries(${OCTOMAP_LIBRARIES})
+message("octomap include dir is ${OCTOMAP_INCLUDE_DIRS} and ${OCTOMAP_LIBRARY_DIRS} and ${OCTOMAP_LIBRARIES}")
 
+find_package(octomap_ros REQUIRED)
+include_directories(${octomap_ros_INCLUDE_DIRS})
+message("octomap_ros include dir is ${octomap_ros_INCLUDE_DIRS}")
 
+#SET(OpenCV_DIR /home/cassie/sd_card/thirdparty/opencv3.4/opencv/build/)
 find_package(OpenCV REQUIRED)
 
 
@@ -153,9 +157,9 @@ catkin_python_setup()
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include/SegmentationMapping
+  INCLUDE_DIRS include/SegmentationMapping 
 #  LIBRARIES segmentation_projection
-  CATKIN_DEPENDS message_filters rospy sensor_msgs message_runtime
+  CATKIN_DEPENDS message_filters rospy sensor_msgs message_runtime 
 #  DEPENDS system_lib
 )
 
@@ -171,7 +175,7 @@ ${catkin_INCLUDE_DIRS}
 ${PCL_INCLUDE_DIRS}
 ${EIGEN_INCLUDE_DIR}
 ${OCTOMAP_INCLUDE_DIRS}
-
+${octomap_ros__INCLUDE_DIRS}
 )
 
 
@@ -207,10 +211,11 @@ add_executable(stereo_segmentation_node src/stereo_segmentation_node.cpp)
 add_dependencies(stereo_segmentation_node ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
 target_link_libraries(labeled_pc_map_node
+  ${OCTOMAP_LIBRARIES}
+  ${octomap_ros_LIBRARIES}
   ${catkin_LIBRARIES}
   ${PCL_COMMON_LIBRARIES}
   ${PCL_IO_LIBRARIES}
-  ${OCTOMAP_LIBRARIES}
 )
 #target_link_libraries(nclt_map_node
 #  ${catkin_LIBRARIES}
