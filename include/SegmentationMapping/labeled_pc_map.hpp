@@ -269,7 +269,9 @@ namespace SegmentationMapping {
 
   template <unsigned int NUM_CLASS> template<typename PointT>
   inline void
-  PointCloudPainter<NUM_CLASS>::merge_new_pc_to_voxel_grids(const typename pcl::PointCloud<PointT> & new_cloud, typename pcl::PointCloud<PointT> & stacked_pc, const Eigen::Affine3d & T_eigen){
+  PointCloudPainter<NUM_CLASS>::merge_new_pc_to_voxel_grids(const typename pcl::PointCloud<PointT> & new_cloud,
+                                                            typename pcl::PointCloud<PointT> & stacked_pc,
+                                                            const Eigen::Affine3d & T_eigen){
     typename pcl::PointCloud<PointT> transformed_cloud;
     pcl::transformPointCloud (new_cloud, transformed_cloud , T_eigen);
     stacked_pc = stacked_pc + transformed_cloud;
@@ -382,6 +384,36 @@ namespace SegmentationMapping {
   
 
   template<unsigned int NUM_CLASS>
+  static void update_nearby_voxels_in_semantic_octree(const pcl::PointSegmentedDistribution<NUM_CLASS> & labeled_pt,
+                                                      octomap::SemanticOcTree & octree_semantic,
+                                                      float resolution) {
+    static std::vector <std::vector <float> > neighbor_offsets {
+      {0,0,0},
+      {0, 0, 0-resolution},
+      {0, 0, 0+resolution},
+      {0-resolution, 0, 0},
+      {0+resolution, 0, 0},
+      {0, 0-resolution, 0},
+      {0, 0+resolution, 0},
+    };
+    std::vector<float> label_dist(labeled_pt.label_distribution, std::end(labeled_pt.label_distribution));
+    for (auto && offset : neighbor_offsets) {
+      float x = labeled_pt.x + offset[0];
+      float y = labeled_pt.y + offset[1];
+      float z = labeled_pt.z + offset[2];
+      octomap::point3d endpoint ( x, y, z);
+
+      octomap::SemanticOcTreeNode * result = octree_semantic.updateNode(x, y, z, true); // integrate 'occupied' measurement
+        
+      if (result) {
+        octree_semantic.averageNodeSemantics(result, label_dist );
+      }
+
+    }
+    
+  }
+  
+  template<unsigned int NUM_CLASS>
   inline void
   PointCloudPainter<NUM_CLASS>::add_pc_to_octomap(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc_rgb,
                                                   const Eigen::Affine3d & T_map2body_eigen,
@@ -419,152 +451,7 @@ namespace SegmentationMapping {
     if (octomap_enabled_ ) {
       for (int i = 0; i < transformed_pc.size(); i++  ) {
         pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
-        float x = p.x;
-        float y = p.y;
-        float z = p.z; // for NCLT only
-        octomap::point3d endpoint ( x,  y, z);
-
-        //if (is_update_occupancy)
-        octomap::SemanticOcTreeNode * result =   octree_ptr_->updateNode(x, y, z, true); // integrate 'occupied' measurement
-        
-        //octomap::SemanticOcTreeNode * result = octree_ptr_->search(endpoint);
-        std::vector<float> label_dist(p.label_distribution, std::end(p.label_distribution));
-        if (i == 0 ) {
-          //std::cout<<"Before recurrent tree update, @ "<<x<<", "<<y << ", "<<z<<" the distribution is  ";
-          //if (result)
-          // std::cout<< result->getSemantics()<<"\n";
-        }
-        if (result) {
-          //std::cout<<"updateNode success\n";
-          octree_ptr_->averageNodeSemantics(result, label_dist );
-          if (p.label == 2 || p.label == 3) {
-            octree_ptr_->averageNodeSemantics(result, label_dist );
-            octree_ptr_->averageNodeSemantics(result, label_dist );
-            octree_ptr_->averageNodeSemantics(result, label_dist );
-            octree_ptr_->averageNodeSemantics(result, label_dist );
-            octree_ptr_->averageNodeSemantics(result, label_dist );
-            octree_ptr_->averageNodeSemantics(result, label_dist );
-            octree_ptr_->averageNodeSemantics(result, label_dist );
-            octree_ptr_->averageNodeSemantics(result, label_dist );
-
-          }
-        }
-        
-        
-        result = octree_ptr_->updateNode(x-octomap_resolution_, y-octomap_resolution_, z-octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x-octomap_resolution_, y-octomap_resolution_, z, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-         result = octree_ptr_->updateNode(x-octomap_resolution_, y-octomap_resolution_, z+octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x-octomap_resolution_, y, z-octomap_resolution_, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-        result = octree_ptr_->updateNode(x-octomap_resolution_, y, z, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x-octomap_resolution_, y, z+octomap_resolution_, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-        result = octree_ptr_->updateNode(x-octomap_resolution_, y+octomap_resolution_, z-octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x-octomap_resolution_, y+octomap_resolution_, z, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-        result = octree_ptr_->updateNode(x-octomap_resolution_, y+octomap_resolution_, z-octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-
-        result = octree_ptr_->updateNode(x, y-octomap_resolution_, z-octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x, y-octomap_resolution_, z, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-         result = octree_ptr_->updateNode(x, y-octomap_resolution_, z+octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x, y, z-octomap_resolution_, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-        result = octree_ptr_->updateNode(x, y, z, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x, y, z+octomap_resolution_, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-        result = octree_ptr_->updateNode(x, y+octomap_resolution_, z-octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x, y+octomap_resolution_, z, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-        result = octree_ptr_->updateNode(x, y+octomap_resolution_, z-octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-     
-
-        result = octree_ptr_->updateNode(x+octomap_resolution_, y-octomap_resolution_, z-octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x+octomap_resolution_, y-octomap_resolution_, z, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-         result = octree_ptr_->updateNode(x+octomap_resolution_, y-octomap_resolution_, z+octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x+octomap_resolution_, y, z-octomap_resolution_, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-        result = octree_ptr_->updateNode(x+octomap_resolution_, y, z, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x+octomap_resolution_, y, z+octomap_resolution_, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-        result = octree_ptr_->updateNode(x+octomap_resolution_, y+octomap_resolution_, z-octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-        
-        result = octree_ptr_->updateNode(x+octomap_resolution_, y+octomap_resolution_, z, true); 
-         if (result)
-        octree_ptr_->averageNodeSemantics(result, label_dist );
-
-        result = octree_ptr_->updateNode(x+octomap_resolution_, y+octomap_resolution_, z-octomap_resolution_, true);
-        if (result)
-         octree_ptr_->averageNodeSemantics(result, label_dist );
-
-
-        //else
-         // std::cout<<"updatNode fails\n";
-
+        update_nearby_voxels_in_semantic_octree(p, *octree_ptr_, (float) octomap_resolution_);
       }
 
     }
@@ -636,29 +523,7 @@ namespace SegmentationMapping {
       //if (is_update_occupancy)
       octree_ptr_->updateInnerOccupancy();
     
-    
-      // for debugging
-      for (int i = 0; i < 1; i++  ) {
-        pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
 
-        float x = p.x;
-        float y = p.y;
-        float z = p.z; // for NCLT only
-        octomap::point3d endpoint ( x,  y, z);
-
-        octomap::SemanticOcTreeNode * result = octree_ptr_->search(x ,y ,z);
-        
-        //std::cout<<"After recurrent tree update, @ "<<x<<", "<<y << ", "<<z<< "the distribution is ";
-        /*if (result)
-          for (auto && d : result->getSemantics().label) {
-            std::cout<<d<<" ";
-          }
-        else {
-          std::cout<<"Cannot find the Semantic TreeNode\n";
-        }
-        std::cout<<"\n";
-        */
-      }
 
       std::cout<<"publishing octree\n";
       octomap_msgs::Octomap bmap_msg;
@@ -670,9 +535,9 @@ namespace SegmentationMapping {
       octomap_publisher_.publish(bmap_msg);
   
 
-      //ros::Time curr_t4 = ros::Time::now();
-      //ROS_DEBUG_STREAM("Callback ends at time "<< (uint32_t)(curr_t4.toSec()) << ". " <<(uint32_t)curr_t4.toNSec() );
-      //std::cout<<"\n";
+      ros::Time curr_t4 = ros::Time::now();
+      ROS_DEBUG_STREAM("Callback ends at time "<< (uint32_t)(curr_t4.toSec()) << ". " <<(uint32_t)curr_t4.toNSec() );
+      std::cout<<"\n";
     }
   }
 
