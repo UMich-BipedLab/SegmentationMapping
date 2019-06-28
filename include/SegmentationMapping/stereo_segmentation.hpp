@@ -382,11 +382,11 @@ namespace SegmentationMapping {
         // Fill in semantics
         //cv::Mat dist_cv =distribution_exp(cv::Rect(u, v, 1, 1));
         cv::Vec<float, NUM_CLASS> dist_class = distribution_exp.at<cv::Vec<float, NUM_CLASS>>(v, u);
-        float sums = cv::sum(dist_class)[0];
+        /*        float sums = cv::sum(dist_class)[0];
         if (sums < 0.99 || sums > 1.01) {
 
           std::cerr<<"Wrong sum out of range: "<<sums<<std::endl;
-        }
+          }*/
         //Eigen::VectorXf dist;
         //Eigen::Map<Eigen::Matrix<float, 20, 1> > eigenT( dist_cv.data );
         //dist = eigenT;
