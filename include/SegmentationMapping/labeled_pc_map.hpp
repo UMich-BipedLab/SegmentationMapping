@@ -3,7 +3,7 @@
  * ROS_PC_MAP
  *
  ***********************************/
-/* Author: Ray Zhang, rzh@umich.edu */
+/* Author: Ray Zhang, rzh@umich.edu, Lu Gan ganlu@umich.edu */
 
 #pragma once
 
@@ -11,6 +11,7 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <ros/time.h>
+#include <XmlRpcValue.h>
 #include <tf/transform_listener.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -30,12 +31,13 @@
 #include <fstream>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <queue>
 #include <tuple>
 #include <boost/make_shared.hpp>
 
 #include <eigen_conversions/eigen_msg.h>
-#include  <tf_conversions/tf_eigen.h>
+#include <tf_conversions/tf_eigen.h>
 #include <tf/transform_datatypes.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -65,7 +67,7 @@ namespace SegmentationMapping {
     PointCloudPainter()
       : nh()
       , pnh("~")  
-        //, painting_enabled_(true)
+      , painting_enabled_(true)
       , distribution_enabled_(false)
       , save_pcd_enabled_(false)
       , static_frame_("/map")
@@ -87,7 +89,7 @@ namespace SegmentationMapping {
     {
       // Parse parameters
       ros::NodeHandle pnh("~");
-      //pnh.getParam("painting_enabled", painting_enabled_);
+      pnh.getParam("painting_enabled", painting_enabled_);
       pnh.getParam("static_frame", static_frame_);
       pnh.getParam("distribution_enabled", distribution_enabled_);
       pnh.getParam("body_frame", body_frame_);
@@ -102,6 +104,24 @@ namespace SegmentationMapping {
       pnh.getParam("octomap_num_frames", octomap_num_frames_);
       pnh.getParam("octomap_max_dist", octomap_max_dist_);
       pnh.getParam("octomap_resolution", octomap_resolution_);
+
+      XmlRpc::XmlRpcValue v;
+      pnh.getParam("labels_to_ignore_in_map", v);
+      std::cout<<"Ignored labels: ";
+      for(int i =0; i < v.size(); i++) {
+        std::cout<<static_cast<int>(v[i])<<" ";
+        labels_to_ignore.insert(static_cast<int>(v[i]));
+      }
+      std::cout<<std::endl<<"target labels ";
+        
+      XmlRpc::XmlRpcValue roads;
+      pnh.getParam("target_labels_in_map",  roads);
+      for(int i =0; i < roads.size(); i++){
+        ROS_ASSERT(roads[i].getType() == XmlRpc::XmlRpcValue::TypeInt);
+        std::cout<<static_cast<int>(roads[i])<<" ";
+        target_labels.insert(static_cast<int>(roads[i]));
+      }
+      std::cout<<"\n";
 
       this->pc_subscriber_ = pnh.subscribe("cloud_in", 1, &PointCloudPainter::PointCloudCallback, this);
 
@@ -195,7 +215,11 @@ namespace SegmentationMapping {
     }
 
     void PointCloudCallback(const sensor_msgs::PointCloudConstPtr& cloud_msg);
-    void FuseMapIncremental(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc, const Eigen::Affine3d & pose_at_pc, double stamp, bool is_write_centroids);
+    void FuseMapIncremental(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc,
+                            const Eigen::Affine3d & pose_at_pc,
+                            double stamp, bool is_write_centroids);
+    void FuseMapIncremental(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc,
+                            const Eigen::Affine3d & pose_at_pc);
     const std::shared_ptr<octomap::SemanticOcTree> get_octree_ptr() const { return octree_ptr_; }
 
   
@@ -208,7 +232,7 @@ namespace SegmentationMapping {
     std::string static_frame_;
     std::string body_frame_;
     
-    //bool painting_enabled_;
+    bool painting_enabled_;
     bool distribution_enabled_;
     bool save_pcd_enabled_;
     bool stacking_visualization_enabled_;
@@ -218,15 +242,17 @@ namespace SegmentationMapping {
     bool cost_map_enabled_;
     bool octomap_enabled_;
 
-    // for voxel grid map
+    // for voxel grid pointcloud map
     ros::Publisher stacked_pc_publisher_;
     pcl::VoxelGrid<pcl::PointXYZRGB> voxel_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr stacked_pc_ptr_;
     typename pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS> >::Ptr pointcloud_seg_stacked_ptr_;
-
     template <typename PointT>
-    void merge_new_pc_to_voxel_grids(const typename pcl::PointCloud<PointT> & new_cloud, typename pcl::PointCloud<PointT> & stacked_cloud, const Eigen::Affine3d & T_map2body);
+    void merge_new_pc_to_voxel_grids(const typename pcl::PointCloud<PointT> & new_cloud,
+                                     typename pcl::PointCloud<PointT> & stacked_cloud,
+                                     const Eigen::Affine3d & T_map2body);
 
+    
     // for path visualization
     ros::Publisher path_publisher_;
     nav_msgs::Path path_;
@@ -251,7 +277,8 @@ namespace SegmentationMapping {
 
     // for semantic octomap
     std::shared_ptr<octomap::SemanticOcTree> octree_ptr_;
-    //std::shared_ptr<octomap::ColorOcTree> octree_ptr_;
+    std::unordered_set<int> labels_to_ignore;
+    std::unordered_set<int> target_labels;
     int octomap_frame_counter_;
     int octomap_num_frames_;
     double octomap_resolution_;
@@ -291,7 +318,8 @@ namespace SegmentationMapping {
 
   template <unsigned int NUM_CLASS>
   inline void
-  PointCloudPainter<NUM_CLASS>::add_pose_to_path(const Eigen::Affine3d  & T_eigen, const std_msgs::Header & header) {
+  PointCloudPainter<NUM_CLASS>::add_pose_to_path(const Eigen::Affine3d  & T_eigen,
+                                                 const std_msgs::Header & header) {
  
     geometry_msgs::PoseStamped pose_stamped;
     pose_stamped.header.stamp = header.stamp;
@@ -401,10 +429,8 @@ namespace SegmentationMapping {
       float x = labeled_pt.x + offset[0];
       float y = labeled_pt.y + offset[1];
       float z = labeled_pt.z + offset[2];
-      octomap::point3d endpoint ( x, y, z);
 
       octomap::SemanticOcTreeNode * result = octree_semantic.updateNode(x, y, z, true); // integrate 'occupied' measurement
-        
       if (result) {
         octree_semantic.averageNodeSemantics(result, label_dist );
       }
@@ -414,17 +440,49 @@ namespace SegmentationMapping {
   }
   
   template<unsigned int NUM_CLASS>
+  static void SemanticOcTree3d_to_OccupancyGrid2d(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & transformed_pc,
+                                                  const octomap::SemanticOcTree & octree,
+                                                  const std::unordered_set<int> & target_labels,
+                                                  nav_msgs::OccupancyGrid & occupancy_grid
+                                                  ){
+    
+    for (int i = 0; i < transformed_pc.size(); i++  ) {
+      auto & p = transformed_pc[i];
+      float x = p.x;
+      float y = p.y;
+      float z = p.z; // for NCLT only
+      octomap::point3d query ( x,  y, z);
+      const octomap::SemanticOcTreeNode* node = octree.search(query);
+      if (node  && node->getOccupancy() > 0.5 && node->isSemanticsSet()) {
+        //auto semantics = node->getSemantics();
+        int label = node->getSemanticLabel();
+    
+        int map_index = MAP_IDX(occupancy_grid.info.width,
+                                int( (x-occupancy_grid.info.origin.position.x) /  occupancy_grid.info.resolution ),
+                                int( (y-occupancy_grid.info.origin.position.y) /  occupancy_grid.info.resolution)) ;
+
+        if (map_index < occupancy_grid.info.width * occupancy_grid.info.height) {
+
+          if (target_labels.find(label) != target_labels.end())
+            occupancy_grid.data[map_index] = 0;  // free
+          else
+            occupancy_grid.data[map_index] = 100;  // occupied
+              
+        }
+      }
+    }
+  }
+  
+  template<unsigned int NUM_CLASS>
   inline void
-  PointCloudPainter<NUM_CLASS>::add_pc_to_octomap(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & pc_rgb,
+  PointCloudPainter<NUM_CLASS>::add_pc_to_octomap(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & transformed_pc,
                                                   const Eigen::Affine3d & T_map2body_eigen,
                                                   bool is_update_occupancy,
                                                   bool is_write_centroids,
                                                   const ros::Time & stamp) {
   
-    pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> transformed_pc;
-    pcl::transformPointCloud (pc_rgb, transformed_pc, T_map2body_eigen);
 
-    std::cout<<"Add "<<pc_rgb.size()<<" points to octomap \n";
+    std::cout<<"Add "<<transformed_pc.size()<<" points to octomap \n";
     if (color_octomap_enabled_) {
       for (int i = 0; i < transformed_pc.size(); i++  ) {
         pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
@@ -436,6 +494,10 @@ namespace SegmentationMapping {
         float x = p.x;
         float y = p.y;
         float z = p.z; // for NCLT only
+              // filter out points that are too far away
+        //if (p.x * p.x + p.y * p.y + p.z * p.z > octomap_max_dist_ * octomap_max_dist_ )
+        //  continue;
+
         octomap::point3d endpoint ( x,  y, z);
         octomap::ColorOcTreeNode* n = color_octree_ptr_->updateNode(endpoint, true);
         color_octree_ptr_->averageNodeColor(x, y, z, r, g, b);
@@ -444,10 +506,6 @@ namespace SegmentationMapping {
     ros::Time curr_t = ros::Time::now();
     ROS_DEBUG_STREAM("Build ColorTree at time "<<uint32_t(curr_t.toSec())<<". "<<uint32_t(curr_t.toNSec()) );
 
-        
-    ros::Time curr_t2 = ros::Time::now();
-    ROS_DEBUG_STREAM("Build occupancy grid at time "<<uint32_t(curr_t2.toSec())<<". "<<(uint32_t)curr_t2.toNSec() );
-
     if (octomap_enabled_ ) {
       for (int i = 0; i < transformed_pc.size(); i++  ) {
         pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
@@ -455,43 +513,8 @@ namespace SegmentationMapping {
       }
 
     }
-
-    ros::Time curr_t3 = ros::Time::now();
-    ROS_DEBUG_STREAM("Build Semantic Tree at time "<<uint32_t(curr_t3.toSec())<<". "<<(uint32_t)curr_t3.toNSec() );
-
-    if (occupancy_grid_enabled_) {
-      for (int i = 0; i < transformed_pc.size(); i++  ) {
-        pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
-        float x = p.x;
-        float y = p.y;
-        float z = p.z; // for NCLT only
-        octomap::point3d query ( x,  y, z);
-        octomap::SemanticOcTreeNode* node = octree_ptr_->search(query);
-        if (node != NULL && node->getOccupancy() > 0.5 && node->isSemanticsSet()) {
-          //auto semantics = node->getSemantics();
-          int label = node->getSemanticLabel();
-    
-          int map_index = MAP_IDX(occupancy_grid_ptr_->info.width,
-                                  int( (x-occupancy_grid_ptr_->info.origin.position.x) /  occupancy_grid_ptr_->info.resolution ),
-                                  int( (y-occupancy_grid_ptr_->info.origin.position.y) /  occupancy_grid_ptr_->info.resolution)) ;
-
-          if (map_index < occupancy_grid_ptr_->info.width * occupancy_grid_ptr_->info.height) {
-            
-            if (label != 3 && label != 2)
-              occupancy_grid_ptr_->data[map_index] = 100;  // occupied
-            else
-              occupancy_grid_ptr_->data[map_index] = 0;  // free
-              
-            /*if (occupancy_grid_noise_percent_ > 0.01 &&
-                (*bernoulli_dist)(rand_generator) ) { // flip
-              occupancy_grid_ptr_->data[map_index] = (occupancy_grid_ptr_->data[map_index] == 100)?0:100;                            
-            }*/
-            
-          }
-        }
-
-      }
-    }        
+    ros::Time curr_t2 = ros::Time::now();
+    ROS_DEBUG_STREAM("Build Semantic Tree at time "<<uint32_t(curr_t2.toSec())<<". "<<(uint32_t)curr_t2.toNSec() );
 
     if (color_octomap_enabled_) {
       std::cout<<"publishing color octree\n";
@@ -504,28 +527,11 @@ namespace SegmentationMapping {
       color_octomap_publisher_.publish(cmap_msg);
     }
 
-    if (occupancy_grid_enabled_) {
-      std::cout << "publishing occupancy grid\n";
-      occupancy_grid_ptr_->header.frame_id = this->static_frame_;
-      occupancy_grid_ptr_->header.stamp = stamp;
-      occupancy_grid_publisher_.publish(*occupancy_grid_ptr_); 
-    }
-
-    if (cost_map_enabled_) {
-      update_cost_map();
-      std::cout << "publishing cost map\n";
-      cost_map_ptr_->header.frame_id = this->static_frame_;
-      cost_map_ptr_->header.stamp = stamp;
-      cost_map_publisher_.publish(*cost_map_ptr_); 
-    }
-
     if (octomap_enabled_){
       //if (is_update_occupancy)
       octree_ptr_->updateInnerOccupancy();
-    
-
-
-      std::cout<<"publishing octree\n";
+      
+      std::cout<<"publishing semantic octree\n";
       octomap_msgs::Octomap bmap_msg;
       bmap_msg.binary = 0 ;
       bmap_msg.resolution = 0.1;
@@ -533,12 +539,8 @@ namespace SegmentationMapping {
       bmap_msg.header.frame_id = this->static_frame_;
       bmap_msg.header.stamp = stamp;
       octomap_publisher_.publish(bmap_msg);
-  
-
-      ros::Time curr_t4 = ros::Time::now();
-      ROS_DEBUG_STREAM("Callback ends at time "<< (uint32_t)(curr_t4.toSec()) << ". " <<(uint32_t)curr_t4.toNSec() );
-      std::cout<<"\n";
     }
+
   }
 
   template <unsigned int NUM_CLASS>
@@ -564,7 +566,7 @@ namespace SegmentationMapping {
 
     }
 
-    if (stacking_visualization_enabled_ && distribution_enabled_) {
+    if (stacking_visualization_enabled_  && distribution_enabled_) {
       std_msgs::Header header;
       header.stamp = t;
       header.frame_id = this->static_frame_;
@@ -573,7 +575,8 @@ namespace SegmentationMapping {
       merge_new_pc_to_voxel_grids<pcl::PointSegmentedDistribution<NUM_CLASS>>(pc,
                                                                               *pointcloud_seg_stacked_ptr_,
                                                                               pose_at_pc);
-      pcl::io::savePCDFile ("segmented_pcd_stacked/stacked_pc_distribution.pcd", *pointcloud_seg_stacked_ptr_);
+      if (save_pcd_enabled_)
+        pcl::io::savePCDFile ("segmented_pcd_stacked/stacked_pc_distribution.pcd", *pointcloud_seg_stacked_ptr_);
 
     }
 
@@ -587,23 +590,110 @@ namespace SegmentationMapping {
 
     
   }
+
+  template <unsigned int NUM_CLASS>
+  inline void
+  PointCloudPainter<NUM_CLASS>::FuseMapIncremental(const pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> & local_pc,
+                                                   const Eigen::Affine3d & pose_at_pc){
+    
+    ros::Time t = pcl_conversions::fromPCL(local_pc.header.stamp );
+    std_msgs::Header header;
+    header.stamp = t;
+
+    pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> transformed_pc;
+    pcl::transformPointCloud (local_pc, transformed_pc, pose_at_pc);
+
+    if (octomap_enabled_) {
+      add_pc_to_octomap(transformed_pc , pose_at_pc, true, false, t );
+    }
+
+    if (stacking_visualization_enabled_ ) {
+      header.frame_id = this->static_frame_;
+      pcl_conversions::toPCL(header, pointcloud_seg_stacked_ptr_->header);
+      pointcloud_seg_stacked_ptr_->header.frame_id = this->static_frame_;
+      merge_new_pc_to_voxel_grids<pcl::PointSegmentedDistribution<NUM_CLASS>>(local_pc,
+                                                                              *pointcloud_seg_stacked_ptr_,
+                                                                              pose_at_pc);
+      if (save_pcd_enabled_)
+        pcl::io::savePCDFile ("segmented_pcd_stacked/stacked_pc_distribution.pcd", *pointcloud_seg_stacked_ptr_);
+
+    }
+
+    if (occupancy_grid_enabled_) {
+      SemanticOcTree3d_to_OccupancyGrid2d(transformed_pc, *octree_ptr_, target_labels,  *occupancy_grid_ptr_);
+      std::cout << "publishing occupancy grid\n";
+      
+      ros::Time curr_t2 = ros::Time::now();
+      ROS_DEBUG_STREAM("Build occupancy grid at time "<<uint32_t(curr_t2.toSec())<<". "<<(uint32_t)curr_t2.toNSec() );
+
+      occupancy_grid_ptr_->header.frame_id = this->static_frame_;
+      occupancy_grid_ptr_->header.stamp = t;
+      occupancy_grid_publisher_.publish(*occupancy_grid_ptr_); 
+    }
+
+    if (cost_map_enabled_) {
+      update_cost_map();
+      std::cout << "publishing cost map\n";
+      cost_map_ptr_->header.frame_id = this->static_frame_;
+      cost_map_ptr_->header.stamp = t;
+      cost_map_publisher_.publish(*cost_map_ptr_); 
+    }
+
+    ros::Time curr_t4 = ros::Time::now();
+    ROS_DEBUG_STREAM("Callback ends at time "<< (uint32_t)(curr_t4.toSec()) << ". " <<(uint32_t)curr_t4.toNSec() );
+    std::cout<<"\n";
+       
+  }
+
   
-  
+
   template <unsigned int NUM_CLASS>
   inline void
   PointCloudPainter<NUM_CLASS>::PointCloudCallback(const sensor_msgs::PointCloudConstPtr& cloud_msg) {
-    sensor_msgs::PointCloud2 painted_cloud;
-    sensor_msgs::PointCloud2 stacked_cloud;
-    //sensor_msgs::convertPointCloudToPointCloud2(*cloud_msg, painted_cloud);
-
-    pcl::PointCloud<pcl::PointXYZRGB> pointcloud_pcl;
-    pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS> > pointcloud_seg;
 
     ros::Time curr_t = ros::Time::now();
     ROS_DEBUG_STREAM("Callback at time "<<uint32_t(curr_t.toSec())<<". "<<uint32_t(curr_t.toNSec()) );
 
-    tf::StampedTransform transform;
+    
 
+    pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS> > pointcloud_seg;
+    
+    for (int i = 0; i < cloud_msg->points.size(); ++i) {
+      // filter out sky, background, human
+      int label = cloud_msg->channels[0].values[i];
+      if (labels_to_ignore.find(label) != labels_to_ignore.end())
+        continue;
+
+      // pack r/g/b into rgb
+      uint8_t r = cloud_msg->channels[1].values[i];
+      uint8_t g = cloud_msg->channels[2].values[i];
+      uint8_t b = cloud_msg->channels[3].values[i];    // Example: Red color
+      uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+
+      pcl::PointSegmentedDistribution<NUM_CLASS> p_seg;
+      p_seg.x = cloud_msg->points[i].x;
+      p_seg.y = cloud_msg->points[i].y;
+      p_seg.z = cloud_msg->points[i].z;
+      p_seg.rgb = *reinterpret_cast<float*>(&rgb);
+      p_seg.label = cloud_msg->channels[0].values[i];
+      
+      if (p_seg.x * p_seg.x + p_seg.y * p_seg.y + p_seg.z * p_seg.z > octomap_max_dist_ * octomap_max_dist_ )
+        continue;
+
+
+      float sums = 0;
+      for (int c = 0; c != NUM_CLASS; c++){
+        p_seg.label_distribution[c] = cloud_msg->channels[c+7].values[i];
+        sums += p_seg.label_distribution[c];
+      }
+      pointcloud_seg.push_back(p_seg);
+    }
+    curr_t = ros::Time::now();
+    ROS_DEBUG_STREAM("Build PointSeg at time "<<uint32_t(curr_t.toSec())<<". "<<uint32_t(curr_t.toNSec()) );
+    std::cout<<"At time "<<cloud_msg->header.stamp.toSec()<<", # of lidar pts is "<<cloud_msg->points.size()<<std::endl;
+
+    // fetch the tf transform at that time
+    tf::StampedTransform transform;
     try{
       this->listener_.lookupTransform(this->static_frame_, this->body_frame_,  
                                       cloud_msg->header.stamp, transform);
@@ -615,88 +705,49 @@ namespace SegmentationMapping {
     }
     Eigen::Affine3d T_map2body_eigen;
     tf::transformTFToEigen (transform,T_map2body_eigen);
-  
-    //for (int j = 0; j < img.rows; ++j) {
-    std::cout<<"At time "<<cloud_msg->header.stamp.toSec()<<", # of lidar pts is "<<cloud_msg->points.size()<<std::endl;
-    for (int i = 0; i < cloud_msg->points.size(); ++i) {
-      pcl::PointXYZRGB p;
-      p.x = cloud_msg->points[i].x;
-      p.y = cloud_msg->points[i].y;
-      p.z = cloud_msg->points[i].z;
 
-      // filter out points that are too far away
-      if (p.x * p.x + p.y * p.y + p.z * p.z > octomap_max_dist_ * octomap_max_dist_ )
-        continue;
 
-      // filter out sky, background, human
-      int label = cloud_msg->channels[0].values[i];
-      if (label == 13 || label== 0 || label == 8 )
-        continue;
+    // enabled for debug use: look at the original color pointcloud
+    if (painting_enabled_) {
+      sensor_msgs::PointCloud2 painted_cloud;
 
+      pcl::PointCloud<pcl::PointXYZRGB> pointcloud_pcl;
+      for (int i = 0; i < cloud_msg->points.size(); ++i) {
+        pcl::PointXYZRGB p;
+        p.x = cloud_msg->points[i].x;
+        p.y = cloud_msg->points[i].y;
+        p.z = cloud_msg->points[i].z;
+
+        // filter out sky, background, human
+        int label = cloud_msg->channels[0].values[i];
+        if (labels_to_ignore.find(label) != labels_to_ignore.end())
+          continue;
+        if (p.x * p.x + p.y * p.y + p.z * p.z > octomap_max_dist_ * octomap_max_dist_ )
+          continue;
       
-      // pack r/g/b into rgb
-      uint8_t r = cloud_msg->channels[1].values[i];
-      uint8_t g = cloud_msg->channels[2].values[i];
-      uint8_t b = cloud_msg->channels[3].values[i];    // Example: Red color
-      uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
-      p.rgb = *reinterpret_cast<float*>(&rgb);
-
-      pcl::PointSegmentedDistribution<NUM_CLASS> p_seg;
-      p_seg.x = cloud_msg->points[i].x;
-      p_seg.y = cloud_msg->points[i].y;
-      p_seg.z = cloud_msg->points[i].z;
-      p_seg.rgb = *reinterpret_cast<float*>(&rgb);
-      p_seg.label = cloud_msg->channels[0].values[i];
-
-      if (distribution_enabled_) {
-        float sums = 0;
-        for (int c = 0; c != NUM_CLASS; c++){
-          p_seg.label_distribution[c] = cloud_msg->channels[c+7].values[i];
-          sums += p_seg.label_distribution[c];
-          //std::cout<<p_seg.label_distribution[c]<<std::endl;
-        }
-        //if (sums < 0.99 || sums > 1.01) {
-        //std::cout<<sums<<std::endl;
-        //  continue;
-        //}
-        
+        // pack r/g/b into rgb
+        uint8_t r = cloud_msg->channels[1].values[i];
+        uint8_t g = cloud_msg->channels[2].values[i];
+        uint8_t b = cloud_msg->channels[3].values[i];    // Example: Red color
+        uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+        p.rgb = *reinterpret_cast<float*>(&rgb);
+        pointcloud_pcl.push_back(p);
       }
-    
-      pointcloud_pcl.push_back(p);
-      pointcloud_seg.push_back(p_seg);
-      
-    }
-    curr_t = ros::Time::now();
-    ROS_DEBUG_STREAM("Build PointSeg at time "<<uint32_t(curr_t.toSec())<<". "<<uint32_t(curr_t.toNSec()) );
+      // publish pointxyzrgb raw at the current timestamp
+      pcl::toROSMsg(pointcloud_pcl, painted_cloud);
+      painted_cloud.header = cloud_msg->header;
+      painted_cloud.header.frame_id = this->body_frame_;
+      pc_publisher_.publish(painted_cloud);
 
-    // publish pointxyzrgb raw at the current timestamp
-    pcl::toROSMsg(pointcloud_pcl, painted_cloud);
-    painted_cloud.header = cloud_msg->header;
-    painted_cloud.header.frame_id = this->body_frame_;
-    pc_publisher_.publish(painted_cloud);
-
-    // publish the stacked pc map
-    if (this->stacking_visualization_enabled_) {
-      pcl_conversions::toPCL(cloud_msg->header, pointcloud_pcl.header);
-      pointcloud_pcl.header.frame_id = this->static_frame_;
-      this->merge_new_pc_to_voxel_grids<pcl::PointXYZRGB>(pointcloud_pcl, *stacked_pc_ptr_, T_map2body_eigen);            
-      pcl::toROSMsg(*(this->stacked_pc_ptr_), stacked_cloud);
-      stacked_cloud.header = cloud_msg->header;
-      stacked_cloud.header.frame_id = this->static_frame_;
-      stacked_pc_publisher_.publish((stacked_cloud));
-     
-      if (distribution_enabled_ && save_pcd_enabled_) {
-        pcl_conversions::toPCL(cloud_msg->header, pointcloud_seg_stacked_ptr_->header);
-        pointcloud_seg_stacked_ptr_->header.frame_id = this->static_frame_;
-        merge_new_pc_to_voxel_grids<pcl::PointSegmentedDistribution<NUM_CLASS>>(pointcloud_seg,
-                                                                                *pointcloud_seg_stacked_ptr_,
-                                                                                T_map2body_eigen);
-
-        ROS_INFO("Save PCD file for the stacked pointcloud with label distribution");
-        pcl::io::savePCDFile ("segmented_pcd/stacked_pc_distribution.pcd", *pointcloud_seg_stacked_ptr_);
-        pcl::io::savePCDFile ("segmented_pcd/stacked_pc_rgb.pcd", pointcloud_pcl);
-          
-
+      if (stacking_visualization_enabled_){
+        pcl_conversions::toPCL(cloud_msg->header, pointcloud_pcl.header);
+        pointcloud_pcl.header.frame_id = this->static_frame_;
+        this->merge_new_pc_to_voxel_grids<pcl::PointXYZRGB>(pointcloud_pcl, *stacked_pc_ptr_, T_map2body_eigen);
+        sensor_msgs::PointCloud2 stacked_cloud;
+        pcl::toROSMsg(*(this->stacked_pc_ptr_), stacked_cloud);
+        stacked_cloud.header = cloud_msg->header;
+        stacked_cloud.header.frame_id = this->static_frame_;
+        stacked_pc_publisher_.publish((stacked_cloud));
       }
 
     }
@@ -705,22 +756,16 @@ namespace SegmentationMapping {
     if (this->path_visualization_enabled_) 
       this->add_pose_to_path(T_map2body_eigen,  cloud_msg->header);
 
-    
-    // save the result of each time step as pcd files
+        // save the result of each time step as pcd files
     if (this->save_pcd_enabled_) {
       std::string name_pcd = std::to_string(cloud_msg->header.stamp.toNSec());
       pcl::io::savePCDFile ("segmented_pcd/" + name_pcd + ".pcd", pointcloud_seg);
     }
 
-    // produce the color octomap. 
-    if (this->octomap_enabled_ || this->color_octomap_enabled_ || this->cost_map_enabled_) {
-      this->add_pc_to_octomap(pointcloud_seg,T_map2body_eigen, true, false, cloud_msg->header.stamp);
-      this->octomap_frame_counter_++;
-      //if (this->octomap_frame_counter_ == this->octomap_num_frames_) {
-      //octree_ptr_->write("semantic_octree.ot");
-      //}
-    }
-
+    // build the map incrementally
+    if (distribution_enabled_)
+      FuseMapIncremental(pointcloud_seg, T_map2body_eigen);
+    
   }
 
 

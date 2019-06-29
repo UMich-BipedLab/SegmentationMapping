@@ -5,7 +5,7 @@
 # dependencies
 python: `ros_numpy`, `tensorflow-gpu-1.8.0`, `python-opencv`, `cuda-9.0`, `python-pcl`, `pcl`
 
-C++: `pcl`, `eigen`
+C++: `pcl`, `eigen`, `xmlrpcpp`
 
 # launch
 * run on Cassie with stereo camera (Intel Realsense): `roslaunch SegmentationMapping cassie_stereo_py.launch`
