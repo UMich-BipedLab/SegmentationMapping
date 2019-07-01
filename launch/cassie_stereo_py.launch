@@ -29,11 +29,24 @@
   </node>
 
   
-   <node pkg="SegmentationMapping" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="screen" required="true"  >
-    <param name="skip_every_k_frame" type="int" value="1" />
-    
+   <node pkg="SegmentationMapping" type="stereo_segmentation_node"  name="stereo_segmentation_node1" output="screen" required="true"  >
+     <param name="color_topic"        type="string" value="/camera/color/image_raw" />
+     <param name="depth_topic"        type="string" value="/camera/aligned_depth_to_color/image_raw" />
+     <param name="depth_cam_topic"    type="string" value="/camera/aligned_depth_to_color/camera_info" />
+     <param name="label_topic"        type="string" value="/labeled_image" />
+     <param name="distribution_topic" type="string" value="/distribution_image" />
+     <param name="skip_every_k_frame" type="int"    value="1" />
   </node> 
-  
+
+  <node pkg="SegmentationMapping" type="stereo_segmentation_node"  name="stereo_segmentation_node2" output="screen" required="true"  >
+     <param name="color_topic"        type="string" value="/camera/color/image_raw" />
+     <param name="depth_topic"        type="string" value="/camera/aligned_depth_to_color/image_raw" />
+     <param name="depth_cam_topic"    type="string" value="/camera/aligned_depth_to_color/camera_info" />
+     <param name="label_topic"        type="string" value="/labeled_image" />
+     <param name="distribution_topic" type="string" value="/distribution_image" />
+     <param name="skip_every_k_frame" type="int"    value="1" />
+  </node> 
+ 
     
   <!-- Painting point cloud -->
 
