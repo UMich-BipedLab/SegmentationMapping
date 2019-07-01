@@ -123,7 +123,7 @@ namespace SegmentationMapping {
       }
       std::cout<<"\n";
 
-      this->pc_subscriber_ = pnh.subscribe("cloud_in", 1, &PointCloudPainter::PointCloudCallback, this);
+      this->pc_subscriber_ = pnh.subscribe("cloud_in", 10, &PointCloudPainter::PointCloudCallback, this);
 
       this->pc_publisher_ = pnh.advertise<sensor_msgs::PointCloud2>("cloud_out", 10);
 
@@ -304,15 +304,15 @@ namespace SegmentationMapping {
     stacked_pc = stacked_pc + transformed_cloud;
 
     // Voxel Grid filtering: uncommet this if the input is sparse
-    //pcl::PCLPointCloud2::Ptr cloud (new pcl::PCLPointCloud2 ());
-    //pcl::PCLPointCloud2::Ptr cloud_filtered (new pcl::PCLPointCloud2 ());
-    //pcl::toPCLPointCloud2(stacked_pc, *cloud);    
+    pcl::PCLPointCloud2::Ptr cloud (new pcl::PCLPointCloud2 ());
+    pcl::PCLPointCloud2::Ptr cloud_filtered (new pcl::PCLPointCloud2 ());
+    pcl::toPCLPointCloud2(stacked_pc, *cloud);    
     // Create the filtering object
-    //pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
-    //sor.setInputCloud (cloud);
-    //sor.setLeafSize (0.1f, 0.1f, 0.1f);
-    //sor.filter (*cloud_filtered);
-    //pcl::fromPCLPointCloud2(*cloud_filtered, stacked_pc);
+    pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
+    sor.setInputCloud (cloud);
+    sor.setLeafSize (0.2f, 0.2f, 0.2f);
+    sor.filter (*cloud_filtered);
+    pcl::fromPCLPointCloud2(*cloud_filtered, stacked_pc);
     
   }
 
@@ -479,7 +479,7 @@ namespace SegmentationMapping {
                                                   const Eigen::Affine3d & T_map2body_eigen,
                                                   bool is_update_occupancy,
                                                   bool is_write_centroids,
-                                                  const ros::Time & stamp) {
+                                                 const ros::Time & stamp) {
   
 
     std::cout<<"Add "<<transformed_pc.size()<<" points to octomap \n";
@@ -553,7 +553,7 @@ namespace SegmentationMapping {
     if (path_visualization_enabled_) {
       std_msgs::Header header;
       header.stamp = t;
-      header.frame_id = this->body_frame_;
+      header.frame_id = pc.header.frame_id;
       add_pose_to_path(pose_at_pc, header);
     }
 
@@ -585,7 +585,7 @@ namespace SegmentationMapping {
     pcl::PointCloud<pcl::PointXYZRGB> pc_rgb;
     PointSeg_to_PointXYZRGB<NUM_CLASS, pcl::PointXYZRGB>(pc, pc_rgb);
     pcl::toROSMsg(pc_rgb, painted_cloud);
-    painted_cloud.header.frame_id = this->body_frame_;
+    painted_cloud.header.frame_id = pc.header.frame_id;
     pc_publisher_.publish(painted_cloud);
 
     
@@ -601,6 +601,7 @@ namespace SegmentationMapping {
     header.stamp = t;
 
     pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>> transformed_pc;
+    transformed_pc.header = local_pc.header;
     pcl::transformPointCloud (local_pc, transformed_pc, pose_at_pc);
 
     if (octomap_enabled_) {
@@ -657,7 +658,7 @@ namespace SegmentationMapping {
     
 
     pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS> > pointcloud_seg;
-    
+    pointcloud_seg.header.frame_id = cloud_msg->header.frame_id;
     for (int i = 0; i < cloud_msg->points.size(); ++i) {
       // filter out sky, background, human
       int label = cloud_msg->channels[0].values[i];
@@ -695,7 +696,7 @@ namespace SegmentationMapping {
     // fetch the tf transform at that time
     tf::StampedTransform transform;
     try{
-      this->listener_.lookupTransform(this->static_frame_, this->body_frame_,  
+      this->listener_.lookupTransform(this->static_frame_, cloud_msg->header.frame_id,  
                                       cloud_msg->header.stamp, transform);
     }
     catch (tf::TransformException ex){
@@ -706,12 +707,12 @@ namespace SegmentationMapping {
     Eigen::Affine3d T_map2body_eigen;
     tf::transformTFToEigen (transform,T_map2body_eigen);
 
-
     // enabled for debug use: look at the original color pointcloud
     if (painting_enabled_) {
       sensor_msgs::PointCloud2 painted_cloud;
 
       pcl::PointCloud<pcl::PointXYZRGB> pointcloud_pcl;
+      pointcloud_pcl.header.frame_id = this->static_frame_;
       for (int i = 0; i < cloud_msg->points.size(); ++i) {
         pcl::PointXYZRGB p;
         p.x = cloud_msg->points[i].x;
@@ -736,12 +737,10 @@ namespace SegmentationMapping {
       // publish pointxyzrgb raw at the current timestamp
       pcl::toROSMsg(pointcloud_pcl, painted_cloud);
       painted_cloud.header = cloud_msg->header;
-      painted_cloud.header.frame_id = this->body_frame_;
       pc_publisher_.publish(painted_cloud);
 
       if (stacking_visualization_enabled_){
         pcl_conversions::toPCL(cloud_msg->header, pointcloud_pcl.header);
-        pointcloud_pcl.header.frame_id = this->static_frame_;
         this->merge_new_pc_to_voxel_grids<pcl::PointXYZRGB>(pointcloud_pcl, *stacked_pc_ptr_, T_map2body_eigen);
         sensor_msgs::PointCloud2 stacked_cloud;
         pcl::toROSMsg(*(this->stacked_pc_ptr_), stacked_cloud);
