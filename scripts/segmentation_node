@@ -54,6 +54,7 @@ class SegmentationNode:
         
         self.labeled_img_pub = rospy.Publisher("/labeled_image",
                                                Image, queue_size=1)
+        self.labeled_img_vis_pub = rospy.Publisher("/labeled_image_vis", Image, queue_size=1)
         self.distribution_pub = rospy.Publisher('/distribution_image',
                                                 ImageLabelDistribution, queue_size=1)
         
@@ -151,6 +152,7 @@ class SegmentationNode:
         dist_out = dist_out[0, :, :, :]
         label_out = label_out[0, :, : ].astype(np.uint8)
 
+        
         '''
         dist_exp = np.exp(dist_out)
         dist_class = dist_exp
