@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 
 <launch>
-<param name="use_sim_time" value="true"/>
 
 <!--  <arg name="pc_bag_file" default="/media/biped/Cassie/bagfiles/2019-04-27/2019-04-27-14-38-10.bag" /> -->
   <!--<arg name="pc_bag_file" default="/home/biped/bagfiles/2019-06-10/belltower_test.bag" />   -->
@@ -79,8 +78,6 @@
   <!-- Painting point cloud -->
 
   <node pkg="SegmentationMapping" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen" required="true" >
-    <remap from="/labeled_pc_map_node/cost_map" to="/labeled_pc_map_node/cost_map2"/>
-    <remap from="/labeled_pc_map_node/occupancy_grid" to="/labeled_pc_map_node/occupancy_grid2"/>
 
 
     <remap from="~cloud_in" to="/labeled_pointcloud" />
