@@ -29,10 +29,9 @@
   </node>
 
   
-  <node pkg="SegmentationMapping" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="screen" required="true"  >
+    <node pkg="SegmentationMapping" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="screen" required="true"  >
     <param name="skip_every_k_frame" type="int" value="1" />
-    
-  </node>
+    </node>
   
     
   <!-- Painting point cloud -->
@@ -67,7 +66,6 @@
     <param name="octomap_prob_miss" type="double" value="0.3" />
     <param name="octomap_occupy_thresh" type="double" value="0.4" />
   </node>
-
   
 
 

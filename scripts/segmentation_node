@@ -72,8 +72,8 @@ class SegmentationNode:
 
         
     def callback(self, img_msg, depth_msg):
-        #now  = rospy.Time.now()
-        #rospy.loginfo("New callback time %i %i, img_time: %i %i, depth_time %i %i", now.secs, now.nsecs, img_msg.header.stamp.secs, img_msg.header.stamp.nsecs, depth_msg.header.stamp.secs, depth_msg.header.stamp.nsecs )
+        now  = rospy.Time.now()
+        rospy.loginfo("New callback time %i %i, img_time: %i %i, depth_time %i %i", now.secs, now.nsecs, img_msg.header.stamp.secs, img_msg.header.stamp.nsecs, depth_msg.header.stamp.secs, depth_msg.header.stamp.nsecs )
         original_img = self.bridge.imgmsg_to_cv2(img_msg , desired_encoding="rgb8")
         #original_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
         labeled_img, distribution = self.infer(original_img)
@@ -99,6 +99,8 @@ class SegmentationNode:
 
 
     def publish_label_and_distribution(self, labeled_img, distribution, header):
+        #now  = rospy.Time.now()
+        #rospy.loginfo("Going to publish at time %i %i\n\n", now.secs, now.nsecs)
         
         label_msg = self.bridge.cv2_to_imgmsg(labeled_img, encoding="mono8")
         label_msg.header = header
@@ -125,8 +127,8 @@ class SegmentationNode:
         self.labeled_img_pub.publish(label_msg)
         self.distribution_pub.publish(distribution_msg)
 
-        #now  = rospy.Time.now()
-        #rospy.loginfo("End callabck at time %i %i\n\n", now.secs, now.nsecs)
+        now  = rospy.Time.now()
+        rospy.loginfo("End callabck at time %i %i\n\n", now.secs, now.nsecs)
 
     def infer(self, rgb_img):
 
@@ -145,8 +147,8 @@ class SegmentationNode:
         
         label_out, dist_out = self.sess.run([self.y, self.dist], feed_dict={self.x: rgb})
         
-        now  = rospy.Time.now()
-        rospy.loginfo("Net Infer Fin at time %i %i", now.secs, now.nsecs)
+        #now  = rospy.Time.now()
+        #rospy.loginfo("Net Infer Fin at time %i %i", now.secs, now.nsecs)
 
         dist_out = dist_out[0, :, :, :]
         label_out = label_out[0, :, : ].astype(np.uint8)
