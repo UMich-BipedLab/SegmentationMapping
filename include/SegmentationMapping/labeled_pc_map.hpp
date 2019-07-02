@@ -277,15 +277,15 @@ namespace SegmentationMapping {
     stacked_pc = stacked_pc + transformed_cloud;
 
     // Voxel Grid filtering: uncommet this if the input is sparse
-    //pcl::PCLPointCloud2::Ptr cloud (new pcl::PCLPointCloud2 ());
-    //pcl::PCLPointCloud2::Ptr cloud_filtered (new pcl::PCLPointCloud2 ());
-    //pcl::toPCLPointCloud2(stacked_pc, *cloud);    
+    pcl::PCLPointCloud2::Ptr cloud (new pcl::PCLPointCloud2 ());
+    pcl::PCLPointCloud2::Ptr cloud_filtered (new pcl::PCLPointCloud2 ());
+    pcl::toPCLPointCloud2(stacked_pc, *cloud);    
     // Create the filtering object
-    //pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
-    //sor.setInputCloud (cloud);
-    //sor.setLeafSize (0.1f, 0.1f, 0.1f);
-    //sor.filter (*cloud_filtered);
-    //pcl::fromPCLPointCloud2(*cloud_filtered, stacked_pc);
+    pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
+    sor.setInputCloud (cloud);
+    sor.setLeafSize (0.2f, 0.2f, 0.2f);
+    sor.filter (*cloud_filtered);
+    pcl::fromPCLPointCloud2(*cloud_filtered, stacked_pc);
     
   }
 
