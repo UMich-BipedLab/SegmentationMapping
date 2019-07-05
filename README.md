@@ -3,10 +3,10 @@
 * Build 3D Semantic voxel maps, 2D occupancy maps, 2D obstacle distance maps
 
 The [Youtube video of the Cassie Bipedal robot](https://www.youtube.com/watch?v=f-FvcHOQXPc)'s perception and mapping system is powered by this library.
-[![Cassie goes autonomous on Umich's wavefield](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/ytb.png)](https://www.youtube.com/watch?v=f-FvcHOQXPc)
+[![Cassie goes autonomous on Umich's wavefield](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/multi-camera/ytb.png)](https://www.youtube.com/watch?v=f-FvcHOQXPc)
 
 Here is a semantic map built on NCLT dataset
-![The Semantic Map build on NCLT dataset](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/octomap.png "NCLT octomap")
+![The Semantic Map build on NCLT dataset](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/multi-camera/octomap.png "NCLT octomap")
 
 
 ## Pipeline
@@ -22,8 +22,8 @@ Outputs (in ROS messages):
 * 2D occupancy maps 
 * 2D cost map, cost computed from distance to closest obstacles
 
-![alt text](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/1.png "Pipeline_1")
-![alt text](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/2.png "Pipeline_2")
+![alt text](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/multi-camera/1.png "Pipeline_1")
+![alt text](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/multi-camera/2.png "Pipeline_2")
 
 ## Performance
 Tested on
