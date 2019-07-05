@@ -2,8 +2,8 @@
 * Label pointcloud from stereo cameras or lidar with Tensorflow trained neural nets graph.pb
 * Build 3D Semantic voxel maps, 2D occupancy maps, 2D obstacle distance maps
 
-The Youtube video of the Cassie Bipedal robot's perception and mapping system is powered by this library.
-[![Cassie goes autonomous on Umich's wavefield](http://img.youtube.com/vi/f-FvcHOQXPc/0.jpg)](https://www.youtube.com/watch?v=f-FvcHOQXPc)
+The [Youtube video of the Cassie Bipedal robot](https://www.youtube.com/watch?v=f-FvcHOQXPc)'s perception and mapping system is powered by this library.
+[![Cassie goes autonomous on Umich's wavefield](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/ytb.png)](https://www.youtube.com/watch?v=f-FvcHOQXPc)
 
 Here is a semantic map built on NCLT dataset
 ![The Semantic Map build on NCLT dataset](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/octomap.png "NCLT octomap")
