@@ -3,7 +3,7 @@ project(SegmentationMapping)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
-SET(CMAKE_BUILD_TYPE Release)
+SET(CMAKE_BUILD_TYPE Debug)
 
 #SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 #SET(ENV{TENSORFLOW_SOURCE_DIR} "/home/biped/thirdparty/tensorflow/")
@@ -242,7 +242,9 @@ target_link_libraries(stereo_segmentation_node #  PRIVATE TensorFlow_DEP
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-   scripts/segmentation_projection_node  scripts/projection.py scripts/gt_pose2bag.py  scripts/helper.py  scripts/segmentation_node
+  scripts/segmentation_projection_node  scripts/projection.py scripts/gt_pose2bag.py  scripts/helper.py
+  scripts/segmentation_node
+  scripts/segmentation_node_two_camera
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 
