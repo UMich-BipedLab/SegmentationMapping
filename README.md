@@ -51,7 +51,8 @@ ros thirdparty:
 * [`ros_numpy`](https://github.com/eric-wieser/ros_numpy)
 
 ## Compiling
-`catkin_make install  -DCMAKE_BUILD_TYPE=Release -Doctomap_DIR=${octomap_source_directory}/lib/cmake/octomap/ --pkg SegmentationMapping`
+Make sure that your semantic octomap is build. Then run 
+`catkin_make install  -DCMAKE_BUILD_TYPE=Release -Doctomap_DIR=${you_octomap_source_directory}/lib/cmake/octomap/ --pkg SegmentationMapping`
 
 ## launchfiles
 * run on Cassie with a single stereo camera (Intel Realsense): `roslaunch SegmentationMapping cassie_stereo_py.launch`
