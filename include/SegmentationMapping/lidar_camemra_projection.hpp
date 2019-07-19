@@ -117,6 +117,8 @@ namespace SegmentationMapping {
       const float MAX_DIS = 120;
       int WIDTH, HEIGHT;
       ofstream file;
+  public:
+      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   };
 
   void LidarProjection::get_params(ros::NodeHandle &nh_){
