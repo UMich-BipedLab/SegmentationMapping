@@ -2,13 +2,18 @@
 * Label pointcloud from stereo cameras or lidar with Tensorflow trained neural nets graph.pb
 * Build 3D Semantic voxel maps, 2D occupancy maps, 2D obstacle distance maps
 
+The [Youtube video of the Cassie Bipedal robot](https://www.youtube.com/watch?v=f-FvcHOQXPc)'s perception and mapping system is powered by this library.
+[![Cassie goes autonomous on Umich's wavefield](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/multi-camera/ytb.png)](https://www.youtube.com/watch?v=f-FvcHOQXPc)
+
 Here is a semantic map built on NCLT dataset
-![The Semantic Map build on NCLT dataset](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/octomap.png "NCLT octomap")
+![The Semantic Map build on NCLT dataset](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/multi-camera/octomap.png "NCLT octomap")
+
 
 ## Pipeline
 Two types of accepted inputs (from ROS topics): 
-* Raw RGBD images from depth cameras, or
-* Lidar scans +  RGB images.
+* Raw RGBD images from depth cameras + /tf published from ROS, or
+* Lidar scans +  RGB images + /tf published from ROS.
+
 
 Outputs (in ROS messages):
 * Labeled images, each pixel with a distribution across classes
@@ -17,8 +22,8 @@ Outputs (in ROS messages):
 * 2D occupancy maps 
 * 2D cost map, cost computed from distance to closest obstacles
 
-![alt text](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/1.png "Pipeline_1")
-![alt text](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/2.png "Pipeline_2")
+![alt text](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/multi-camera/1.png "Pipeline_1")
+![alt text](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/multi-camera/2.png "Pipeline_2")
 
 ## Performance
 Tested on
@@ -45,9 +50,14 @@ ros thirdparty:
 * [`semantic octomap`](https://github.com/UMich-BipedLab/octomap.git): Modified octomap, supporting Bayesian updates for semantic label fusion
 * [`ros_numpy`](https://github.com/eric-wieser/ros_numpy)
 
+## Compiling
+Make sure that your semantic octomap is build. Then run 
+`catkin_make install  -DCMAKE_BUILD_TYPE=Release -Doctomap_DIR=${you_octomap_source_directory}/lib/cmake/octomap/ --pkg SegmentationMapping`
+
 ## launchfiles
-* run on Cassie with stereo camera (Intel Realsense): `roslaunch SegmentationMapping cassie_stereo_py.launch`
+* run on Cassie with a single stereo camera (Intel Realsense): `roslaunch SegmentationMapping cassie_stereo_py.launch`
 * run nclt dataset: `roslaunch SegmentationMapping nclt_distribution_deeplab.launch`
+* run on mulitple cameras with multiple segmentations at the same time: `roslaunch SegmentationMapping cassie_stereo_py_multi_camera.launch`
 
 <!---
 # parameters in the launch file

@@ -3,7 +3,7 @@ project(SegmentationMapping)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
-SET(CMAKE_BUILD_TYPE Release)
+SET(CMAKE_BUILD_TYPE Debug)
 
 #SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 #SET(ENV{TENSORFLOW_SOURCE_DIR} "/home/biped/thirdparty/tensorflow/")
@@ -23,7 +23,8 @@ SET(CMAKE_BUILD_TYPE Release)
 find_package(catkin REQUIRED COMPONENTS
   message_filters
   rospy
-  octomap
+  roscpp
+  #octomap
   sensor_msgs
   geometry_msgs
   nav_msgs
@@ -188,12 +189,11 @@ ${OCTOMAP_INCLUDE_DIRS}
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-#add_executable(labeled_pc_map_node src/labeled_pc_map_node.cpp)
+add_executable(labeled_pc_map_node src/labeled_pc_map_node.cpp)
 #add_executable(nclt_map_node      src/rvsm_nclt_node.cpp)
 #add_executable(query_semantic_tree src/query_semantic_tree.cpp)
 add_executable(stereo_segmentation_node src/stereo_segmentation_node.cpp)
 add_executable(lidar_projection_node src/lidar_projection_node.cpp)
-add_executable(text src/text.cpp)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -206,14 +206,13 @@ add_executable(text src/text.cpp)
 
 add_dependencies(stereo_segmentation_node ${catkin_EXPORTED_TARGETS})
 add_dependencies(lidar_projection_node ${catkin_EXPORTED_TARGETS})
-add_dependencies(text ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
-#target_link_libraries(labeled_pc_map_node
-#  ${catkin_LIBRARIES}
-#  ${PCL_COMMON_LIBRARIES}
-#  ${PCL_IO_LIBRARIES}
-#  ${OCTOMAP_LIBRARIES}
-#)
+target_link_libraries(labeled_pc_map_node
+  ${catkin_LIBRARIES}
+  ${PCL_COMMON_LIBRARIES}
+  ${PCL_IO_LIBRARIES}
+  ${OCTOMAP_LIBRARIES}
+)
 #target_link_libraries(nclt_map_node
 #  ${catkin_LIBRARIES}
 #  ${PCL_COMMON_LIBRARIES}
@@ -239,11 +238,6 @@ target_link_libraries(lidar_projection_node
   ${OpenCV_LIBS}
 )
 
-target_link_libraries(text
-  ${EIGEN_INCLUDE_DIR}
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBS}
-)
 #############
 ## Install ##
 #############
@@ -254,7 +248,9 @@ target_link_libraries(text
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-   scripts/segmentation_projection_node  scripts/projection.py scripts/gt_pose2bag.py  scripts/helper.py  scripts/segmentation_node
+  scripts/segmentation_projection_node  scripts/projection.py scripts/gt_pose2bag.py  scripts/helper.py
+  scripts/segmentation_node
+  scripts/segmentation_node_two_camera
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 

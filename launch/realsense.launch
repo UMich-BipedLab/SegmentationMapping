@@ -16,7 +16,7 @@
 
     <!-- Run segmentation node -->
 
-    <node pkg="segmentation_projection"     type="segmentation_projection_node" name="segmentation_projection_node" output="screen" clear_params="true" required="true" >
+    <node pkg="SegmentationMapping"     type="segmentation_node" name="segmentation_node" output="screen" clear_params="true" required="true" >
       
       <param name="labeled_pointcloud"   type="string" value="labeled_pointcloud" />
     
