@@ -159,7 +159,7 @@ class LidarSeg:
         print(" shape of projected points from camera # " + str(camera_ind)+ " is "+str(points_on_img.shape)+", # of in range points is "+str(len(labels)))
         ##########################################################################
         # uncomment this if you want to visualize the projection && labeling result
-        #self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
+        self.visualization(labels, projected_index, projected_lidar_2d, rgb_img)
         self.counter +=1
         ##########################################################################
         #publish_pcl_pc2_label(projected_points, labels )

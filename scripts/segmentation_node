@@ -146,7 +146,7 @@ class SegmentationNode:
         label_out, dist_out = self.sess.run([self.y, self.dist], feed_dict={self.x: rgb})
         
         now  = rospy.Time.now()
-        rospy.loginfo("Net Infer Fin at time %i %i", now.secs, now.nsecs)
+        # rospy.loginfo("Net Infer Fin at time %i %i", now.secs, now.nsecs)
 
         dist_out = dist_out[0, :, :, :]
         label_out = label_out[0, :, : ].astype(np.uint8)

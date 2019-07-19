@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 
 <launch>
-<!--  <param name="use_sim_time" value="true"/>-->
+  <!-- <param name="use_sim_time" value="true"/> -->
 
 <!--  <arg name="pc_bag_file" default="/media/biped/Cassie/bagfiles/2019-04-27/2019-04-27-14-38-10.bag" /> -->
-  <!--<arg name="pc_bag_file" default="/home/biped/bagfiles/2019-06-10/belltower_test.bag" />   -->
+  <!-- <arg name="pc_bag_file" default="/home/fangkd/Desktop/2019-06-19-15-39-09.bag" />    -->
   <?ignore <node pkg="rosbag" type="play" name="bagplayer" output="screen" args="--clock  -q $(arg pc_bag_file)"/>  ?>
   
   
@@ -16,8 +16,9 @@
 
 
   <node pkg="SegmentationMapping" type="segmentation_node" name="segmentation_node" output="screen" required="true">
-    <!--<param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/optimized_mobilenet_const_nclt_2019_06_11.pb"/>  -->
-    <param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/mobilenet_nclt/optimized_graph_mobilenet_trt32_2019-06-15.pb"/> 
+    <!-- <param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/optimized_mobilenet_const_nclt_2019_06_11.pb"/>  --> 
+    <!-- <param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/mobilenet_nclt/optimized_graph_mobilenet_trt32_2019-06-15.pb"/>  -->
+    <param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/mobilenet_nclt/optimized_graph_mobilenet_notrt_2019-06-15.pb"/> 
     <param name="network_image_input_tensor" type="str" value="network/input/Placeholder:0"/>
     <param name="network_distribution_output_tensor" type="str" value="network/output/ClassDistribution:0"/>
     <param name="network_label_output_tensor" type="str" value="network/output/ClassIndexPrediction:0"/>
@@ -28,19 +29,24 @@
 
   </node>
 
+  <arg name="pc_bag_file" default="/home/fangkd/Desktop/2019-06-19-15-39-09.bag" />
+  <node pkg="rosbag" type="play" name="bagplayer" args="-l $(arg pc_bag_file)"/>  
+
+  <!-- <node pkg="SegmentationMapping" type="lidar_projection_node" name="lidar_projection_node" /> -->
+
   
-  <node pkg="SegmentationMapping" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="screen" required="true"  >
+  <!-- <node pkg="SegmentationMapping" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="screen" required="true"  >
     <param name="skip_every_k_frame" type="int" value="1" />
     
-  </node>
+  </node> -->
   
     
   <!-- Painting point cloud -->
 
-  <node pkg="SegmentationMapping" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen" required="true">
+  <!-- <node pkg="SegmentationMapping" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen" required="true"> -->
 
       
-    <remap from="~cloud_in" to="/labeled_pointcloud" />
+    <!-- <remap from="~cloud_in" to="/labeled_pointcloud" />
     <remap from="~cloud_out" to="/labeled_pointcloud_pc2" />
 
     <param name="painting_enabled" type="bool" value="true" />
@@ -52,17 +58,17 @@
     <param name="save_pcd_enabled" type="bool" value="false" />
     <param name="color_octomap_enabled" type="bool" value="false" />
     <param name="occupancy_grid_enabled" type="bool" value="true" />
-    <param name="cost_map_enabled" type="bool" value="true" />
+    <param name="cost_map_enabled" type="bool" value="true" /> -->
 
     <!-- for semantic octomap generation -->
-    <param name="octomap_enabled" type="bool" value="false"/>
+    <!-- <param name="octomap_enabled" type="bool" value="false"/>
     <param name="octomap_num_frames" type="int" value="3000" />
     <param name="octomap_max_dist" type="int" value="10" />
     <param name="octomap_resolution" type="double" value="0.1" />
     <param name="octomap_prob_hit" type="double" value="0.53" />
     <param name="octomap_prob_miss" type="double" value="0.3" />
-    <param name="octomap_occupy_thresh" type="double" value="0.4" />
-  </node>
+    <param name="octomap_occupy_thresh" type="double" value="0.4" /> -->
+  <!-- </node> -->
 
   
 
