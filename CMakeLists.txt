@@ -23,6 +23,7 @@ SET(CMAKE_BUILD_TYPE Debug)
 find_package(catkin REQUIRED COMPONENTS
   message_filters
   rospy
+  roscpp
   #octomap
   sensor_msgs
   geometry_msgs

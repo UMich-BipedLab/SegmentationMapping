@@ -39,6 +39,7 @@ with tf.Session(graph=G,config=config) as sess:
     distribution_sliced = d[:, :, :, :new_num_class]
     class_prob_tensor = tf.nn.softmax(distribution_sliced, name='network/output/ClassDistribution')
     label_tensor = tf.argmax(class_prob_tensor, axis=-1, name='network/output/ClassIndexPrediction', output_type=tf.int32)
+
     
     print("tensorrt graph conversion...")
     trt_graph = trt.create_inference_graph(
@@ -48,6 +49,7 @@ with tf.Session(graph=G,config=config) as sess:
         max_workspace_size_bytes=2500000000,
         precision_mode=args.precision)
     print('\n\nFinish tensorrt creation, now  import to tensorflow')
+    
     # Import the TensorRT graph into a new graph and run:
     #print(distribution_sliced.shape)
     #x = G.get_tensor_by_name('import/ImageTensor:0')
@@ -56,8 +58,9 @@ with tf.Session(graph=G,config=config) as sess:
 g_new = tf.Graph()
 with tf.Session(graph=g_new,config=config) as sess2:
     output_node = tf.import_graph_def(
-    trt_graph,
-    return_elements=[ 'network/output/ClassDistribution', 'network/output/ClassIndexPrediction' ], name='')
+        trt_graph,
+        #G.as_graph_def(),
+        return_elements=[ 'network/output/ClassDistribution', 'network/output/ClassIndexPrediction' ], name='')
 
 
     x = g_new.get_tensor_by_name('network/input/Placeholder:0')
