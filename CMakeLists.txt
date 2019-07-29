@@ -3,7 +3,8 @@ project(SegmentationMapping)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
-SET(CMAKE_BUILD_TYPE Debug)
+SET(CMAKE_BUILD_TYPE Release)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 ")
 
 #SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 #SET(ENV{TENSORFLOW_SOURCE_DIR} "/home/biped/thirdparty/tensorflow/")
@@ -23,6 +24,7 @@ SET(CMAKE_BUILD_TYPE Debug)
 find_package(catkin REQUIRED COMPONENTS
   message_filters
   rospy
+  roscpp
   #octomap
   sensor_msgs
   geometry_msgs

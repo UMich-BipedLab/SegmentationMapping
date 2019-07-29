@@ -37,7 +37,7 @@ import pdb
 
 class SegmentationNode:
     def __init__(self):
-        rospy.init_node('segmentation_node', anonymous=True)
+        rospy.init_node('~', anonymous=True)
         rospy.sleep(0.5)
         
         
@@ -51,17 +51,15 @@ class SegmentationNode:
                                                rospy.get_param("~network_distribution_output_tensor"))
         print(self.network_config)
         self.tf_init()
-        
-        self.labeled_img_pub = rospy.Publisher("/labeled_image",
+
+        self.labeled_img_pub = rospy.Publisher("~label_topic",
                                                Image, queue_size=1)
-        self.labeled_img_vis_pub = rospy.Publisher("/labeled_image_vis", Image, queue_size=1)
-        self.distribution_pub = rospy.Publisher('/distribution_image',
+        self.distribution_pub = rospy.Publisher("~distribution_topic",
                                                 ImageLabelDistribution, queue_size=1)
-        
-        self.input_rgb_img_ = message_filters.Subscriber('/camera/color/image_raw',
+
+        self.input_rgb_img_ = message_filters.Subscriber('~color_topic',
                                                         Image,  queue_size=2)
-        self.input_depth_img_ = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image, queue_size=2)
-        #ts = message_filters.ApproximateTimeSynchronizer([self.input_rgb_img_, self.input_depth_img_], 20, 0.06)
+        self.input_depth_img_ = message_filters.Subscriber('~depth_topic', Image, queue_size=2)
         ts = message_filters.TimeSynchronizer([self.input_rgb_img_, self.input_depth_img_], 3)
         ts.registerCallback(self.callback)
 

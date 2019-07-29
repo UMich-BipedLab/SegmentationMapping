@@ -5,10 +5,14 @@
 Here is a semantic map built on NCLT dataset
 ![The Semantic Map build on NCLT dataset](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/cassie/octomap.png "NCLT octomap")
 
+
 ## Pipeline
 Two types of accepted inputs (from ROS topics): 
 * Raw RGBD images from depth cameras, or
 * Lidar scans +  RGB images.
+
+C++: `pcl`, `eigen`, `xmlrpcpp`
+
 
 Outputs (in ROS messages):
 * Labeled images, each pixel with a distribution across classes
