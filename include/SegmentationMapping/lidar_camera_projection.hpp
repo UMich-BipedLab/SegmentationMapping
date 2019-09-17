@@ -25,6 +25,10 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <opencv2/core/matx.hpp>
+#include <unordered_map>
+#include <tuple>
+
 
 using namespace std;
 using namespace Eigen;
@@ -76,7 +80,8 @@ namespace SegmentationMapping {
 
       void visualize_results(const sensor_msgs::ImageConstPtr& img);
 
-      void set_label_pcl(const ImageLabelDistribution::ConstPtr& info);
+      void set_label_pcl(                    const sensor_msgs::ImageConstPtr& img,
+                                             const ImageLabelDistribution::ConstPtr& info);
 
       void callback(const sensor_msgs::PointCloud2ConstPtr& msg, 
                     const sensor_msgs::ImageConstPtr& img,
@@ -130,14 +135,20 @@ namespace SegmentationMapping {
     nh_.getParam("image_width", WIDTH);
     nh_.getParam("image_height", HEIGHT);
 
-    vector<float> ImuLidar;
-    vector<float> ImuCamera;
-    nh_.getParam("imu2lidar", ImuLidar);
-    nh_.getParam("imu2camera", ImuCamera);
-
-    MatrixXf ImuLidarMat = vector2matrix(ImuLidar);
-    MatrixXf ImuCameraMat = vector2matrix(ImuCamera);
-    Extrinsic = ImuLidarMat * ImuCameraMat.inverse();
+    //vector<float> ImuLidar;
+    //vector<float> ImuCamera;
+    //nh_.getParam("imu2lidar", ImuLidar);
+    //nh_.getParam("imu2camera", ImuCamera);
+    vector<float> Extrinsic_param;
+    nh_.getParam("extrinsic_mat", Extrinsic_param);
+    
+    // MatrixXf ImuLidarMat = vector2matrix(ImuLidar);
+    // MatrixXf ImuCameraMat = vector2matrix(ImuCamera);
+    //Extrinsic = ImuLidarMat * ImuCameraMat.inverse();
+    Extrinsic.setIdentity();
+    for (int i = 0; i < Extrinsic_param.size(); i++)
+      Extrinsic(i / 4, i % 4) = Extrinsic_param[i];
+    std::cout<<"Extrinsic calibration mat is \n"<<Extrinsic;
   }
 
   Matrix4f LidarProjection::vector2matrix(vector<float> input){
@@ -241,9 +252,9 @@ namespace SegmentationMapping {
     for (size_t i = 0; i < point.rows(); i++){
       if (pointmat(2, i) > 0){
         if (pointmat(0, i)/pointmat(2, i) >= 0
-         && pointmat(0, i)/pointmat(2, i) < WIDTH
+         && pointmat(0, i)/pointmat(2, i) < WIDTH-1
          && pointmat(1, i)/pointmat(2, i) >= 0
-         && pointmat(1, i)/pointmat(2, i) < HEIGHT){
+         && pointmat(1, i)/pointmat(2, i) < HEIGHT-1){
           v.push_back(i);          
         }
       }
@@ -312,35 +323,85 @@ namespace SegmentationMapping {
   }
 
   void LidarProjection::set_label_pcl(
-  	const ImageLabelDistribution::ConstPtr& info)
+                                      const sensor_msgs::ImageConstPtr& img,
+                                      const ImageLabelDistribution::ConstPtr& info)
   {
     int stride1 = info->distribution.layout.dim[1].stride;
     int stride2 = info->distribution.layout.dim[2].stride;
     int channel = info->distribution.layout.dim[2].size;
     DistriCloud.points.resize(CloudMat.cols());
-    DistriCloud.channels.resize(channel);
-    for (int i = 0; i < channel; i++){
+    DistriCloud.channels.resize(channel+7);
+
+    std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
+    label2color[2]  =std::make_tuple(250, 250, 250 ); // road
+    //label2color[3]  =std::make_tuple(128, 64,  128 ); // sidewalk
+    label2color[3]  =std::make_tuple(250, 250,  250 ); // sidewalk
+    label2color[5]  =std::make_tuple(250, 128, 0   ); // building
+    label2color[10] =std::make_tuple(192, 192, 192 ); // pole
+    label2color[12] =std::make_tuple(250, 250, 0   ); // sign
+    label2color[6]  =std::make_tuple(0  , 100, 0   ); // vegetation
+    label2color[4]  =std::make_tuple(128, 128, 0   ); // terrain
+    label2color[13] =std::make_tuple(135, 206, 235 ); // sky
+    label2color[1]  =std::make_tuple( 30, 144, 250 ); // water
+    label2color[8]  =std::make_tuple(220, 20,  60  ); // person
+    label2color[7]  =std::make_tuple( 0, 0,142     ); // car
+    label2color[9]  =std::make_tuple(119, 11, 32   ); // bike
+    label2color[11] =std::make_tuple(123, 104, 238 ); // stair
+    label2color[0]  =std::make_tuple(255, 255, 255 ); // background
+
+    cv::Mat image = cv_bridge::toCvCopy(img, "bgr8")->image;
+    cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+    
+    for (int i = 0; i < channel+7; i++){
       DistriCloud.channels[i].values.resize(CloudMat.cols());
     }
     
     for (size_t j = 0; j < pcl_info.size(); j++){
+      std::cout<<j<<", \nnew "<<          info->distribution.data[4300799]<<std::endl;
       DistriCloud.points[j].x = Cloud.points[pcl_info[j]].x;
       DistriCloud.points[j].y = Cloud.points[pcl_info[j]].y;
       DistriCloud.points[j].z = Cloud.points[pcl_info[j]].z;
       int col = round(CloudMat(0, j));
       int row = round(CloudMat(1, j));
+      float max_prob = 0;
+      int max_l = -1;
+      
       for (int k = 0; k < channel; k++){
-        DistriCloud.channels[k].values[j] = 
+        std::cout<<"row "<<row<<", col "<<col<<", index "<<stride1 * row + stride2 * col + k<<std::endl;
+        std::cout<<info->distribution.data[stride1 * row + stride2 * col + k]<<"\n";
+        DistriCloud.channels[k+7].values[j] = 
           info->distribution.data[stride1 * row + stride2 * col + k];
+
+        if (info->distribution.data[stride1 * row + stride2 * col + k] > max_prob) {
+          max_prob = info->distribution.data[stride1 * row + stride2 * col + k];
+
+          max_l = k;
+        }
       }
+      std::cout<<"max_l: "<<max_l<<std::endl;
+      DistriCloud.channels[0].values[j] = max_l;
+      DistriCloud.channels[1].values[j] = std::get<0>(label2color[max_l]);
+      DistriCloud.channels[2].values[j] = std::get<1>(label2color[max_l]);
+      DistriCloud.channels[3].values[j] = std::get<2>(label2color[max_l]);
+      cv::Vec3b intensity = image.at<cv::Vec3b>(row, col);
+      uchar blue = intensity.val[0];
+      uchar green = intensity.val[1];
+      uchar red = intensity.val[2];
+      DistriCloud.channels[4].values[j] = red;
+      DistriCloud.channels[5].values[j] = green;
+      DistriCloud.channels[6].values[j] = blue;
+      std::cout<<"j"<<j<<std::endl;
     }
+    std::cout<<"Finish generate distribution cloud\n";
   }
+
 
   void LidarProjection::callback(const sensor_msgs::PointCloud2ConstPtr& msg,
                                  const sensor_msgs::ImageConstPtr& img,
                                  const sensor_msgs::CameraInfoConstPtr& cam,
                                  const ImageLabelDistribution::ConstPtr& info)
   {
+    ROS_INFO("lidar callback!");
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
     set_pointcloud_matrix(msg);
@@ -352,7 +413,7 @@ namespace SegmentationMapping {
     // Visulization
     // visualize_results(img);
 
-    set_label_pcl(info);
+    set_label_pcl(img, info);
     DistriCloud.header = msg->header;
     pcl_pub.publish(DistriCloud);
 
@@ -361,6 +422,7 @@ namespace SegmentationMapping {
     // cout << "1 Frame time: " << duration << endl;
     // cout << DistriCloud.header << endl;
     ROS_INFO("Published new cloud.");
+
     // file << duration << "  " << Cloud.points.size() << "  " << pcl_info.size() << endl;
   }
 

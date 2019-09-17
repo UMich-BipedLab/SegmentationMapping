@@ -692,6 +692,9 @@ namespace SegmentationMapping {
     curr_t = ros::Time::now();
     ROS_DEBUG_STREAM("Build PointSeg at time "<<uint32_t(curr_t.toSec())<<". "<<uint32_t(curr_t.toNSec()) );
     std::cout<<"At time "<<cloud_msg->header.stamp.toSec()<<", # of lidar pts is "<<cloud_msg->points.size()<<std::endl;
+    std::string name_pcd = std::to_string(cloud_msg->header.stamp.toNSec());
+    pcl::io::savePCDFile ( name_pcd + ".pcd", pointcloud_seg);
+    
 
     // fetch the tf transform at that time
     tf::StampedTransform transform;

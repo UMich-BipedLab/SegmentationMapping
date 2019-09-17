@@ -1,8 +1,13 @@
 <?xml version="1.0"?>
 
+
+
 <launch>
+
+<!--  <param name="use_sim_time" value="true"/>-->
+  
   <node pkg="SegmentationMapping" type="segmentation_node" name="segmentation_node" output="log" required="true">
-    <param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/optimized_mobilenet_const_nclt_2019_06_11.pb"/>  
+
     <param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/mobilenet_nclt/optimized_graph_mobilenet_trt32_2019-06-15.pb"/> 
     <param name="network_image_input_tensor" type="str" value="network/input/Placeholder:0"/>
     <param name="network_distribution_output_tensor" type="str" value="network/output/ClassDistribution:0"/>
@@ -18,13 +23,12 @@
 
   </node>
 
-  <arg name="pc_bag_file" default="/home/fangkd/Desktop/2019-06-19-15-39-09.bag" />
-  <node pkg="rosbag" type="play" name="bagplayer" args="-l $(arg pc_bag_file)"/>  
 
-  <node pkg="SegmentationMapping" type="lidar_projection_node" name="single_camera" output="screen" required="true">
+  <node pkg="SegmentationMapping" type="lidar_projection_node" name="single_camera" output="screen" required="true" launch-prefix="gdb -ex run --args" >
     <!-- <param name="quaternion" type="string" value="0.057 -0.075 -0.269 0.499 -0.495 0.503 0.502"/> -->
-    <rosparam param="imu2camera">[0.15204907, 0.02689208, 0.40570395, -0.4661439, 0.4669757, -0.5309942, 0.5316848]</rosparam>
-    <rosparam param="imu2lidar">[-0.033, 0.000, -0.611, 0, 0, 0, 1]</rosparam>
+    <!--<rosparam param="imu2camera">[0.15204907, 0.02689208, 0.40570395, -0.4661439, 0.4669757, -0.5309942, 0.5316848]</rosparam>
+        <rosparam param="imu2lidar">[-0.033, 0.000, -0.611, 0, 0, 0, 1]</rosparam>-->
+    <rosparam param="extrinsic_mat"> [0.0388,   -0.9992,   -0.0075, 0.0738, 0.1324,0.0126,-0.9911, 0.0279, 0.9904,0.0374,0.1328, -0.1829] </rosparam>
     <param name="image_width" type="int" value="640"/>
     <param name="image_height" type="int" value="480"/>
     <param name="publish_to" type="string" value="/labeled_pointcloud"/>
@@ -33,7 +37,41 @@
     <param name="camera_info" type="string" value="/camera/color/camera_info"/>  
     <param name="distribution" type="string" value="/segmentation_node/distribution_topic"/>
   </node>
-  
+
+    <node pkg="SegmentationMapping" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen" required="true" >
+
+
+    <remap from="~cloud_in" to="/labeled_pointcloud" />
+    <remap from="~cloud_out" to="/labeled_pointcloud_local_pc2" />
+
+    <rosparam param="labels_to_ignore_in_map">[0, 8, 13]</rosparam>
+    <rosparam param="target_labels_in_map">[2,3]</rosparam>
+
+
+    <param name="distribution_enabled" type="bool" value="true" />
+    <param name="static_frame"  type="string" value="/odom" />
+    <param name="body_frame"  type="string" value="/cassie/pelvis" />
+    <param name="painting_enabled" type="bool" value="true" />
+    <param name="stacking_visualization_enabled" type="bool" value="false" />
+    <param name="path_visualization_enabled" type="bool" value="true" />
+    <param name="save_pcd_enabled" type="bool" value="false" />
+    <param name="color_octomap_enabled" type="bool" value="false" />
+    <param name="occupancy_grid_enabled" type="bool" value="false" />
+    <param name="occupancy_grid_noise_percent" type="double" value="0.0" />
+    <param name="cost_map_enabled" type="bool" value="false" />
+
+
+    <!-- for semantic octomap generation -->
+    <param name="octomap_enabled" type="bool" value="true"/>
+    <param name="octomap_num_frames" type="int" value="3000" />
+    <param name="octomap_max_dist" type="int" value="50" />
+    <param name="octomap_resolution" type="double" value="0.20" />
+    <param name="octomap_prob_hit" type="double" value="0.55" />
+    <param name="octomap_prob_miss" type="double" value="0.3" />
+    <param name="octomap_occupy_thresh" type="double" value="0.4" />
+  </node>
+
+
 
 
 </launch>

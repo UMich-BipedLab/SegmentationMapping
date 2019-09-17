@@ -37,9 +37,8 @@ import pdb
 
 class SegmentationNode:
     def __init__(self):
+
         rospy.init_node('~', anonymous=True)
-        rospy.sleep(0.5)
-        
         
         self.network_config = NeuralNetConfigs(rospy.get_param("~neural_net_graph"),\
                                                rospy.get_param("~num_classes"),\
@@ -56,12 +55,13 @@ class SegmentationNode:
                                                Image, queue_size=1)
         self.distribution_pub = rospy.Publisher("~distribution_topic",
                                                 ImageLabelDistribution, queue_size=1)
+        self.sub = rospy.Subscriber('~color_topic', Image, self.callback)
+        #self.input_rgb_img_ = message_filters.Subscriber('~color_topic',
+        #                                                Image,  queue_size=2)
 
-        self.input_rgb_img_ = message_filters.Subscriber('~color_topic',
-                                                        Image,  queue_size=2)
-        self.input_depth_img_ = message_filters.Subscriber('~depth_topic', Image, queue_size=2)
-        ts = message_filters.TimeSynchronizer([self.input_rgb_img_, self.input_depth_img_], 3)
-        ts.registerCallback(self.callback)
+        #self.input_depth_img_ = message_filters.Subscriber('~depth_topic', Image, queue_size=2)
+        #ts = message_filters.TimeSynchronizer([self.input_rgb_img_, self.input_depth_img_], 3)
+        #ts.registerCallback(self.callback)
 
         
         self.skip_img_freq = rospy.get_param('~skip_input_img_freq')
@@ -69,27 +69,27 @@ class SegmentationNode:
         self.bridge = CvBridge()
         
 
-
-        
-    def callback(self, img_msg, depth_msg):
+    #def callback(self, img_msg, depth_msg):
+    def callback(self, img_msg):        
+        print("segmentaion call back")
         if self.counter % self.skip_img_freq != 0:
             self.counter += 1
             return
         else:
             self.counter += 1
         now  = rospy.Time.now()
-        rospy.loginfo("New callback time %i %i, img_time: %i %i, depth_time %i %i", now.secs, now.nsecs, img_msg.header.stamp.secs, img_msg.header.stamp.nsecs, depth_msg.header.stamp.secs, depth_msg.header.stamp.nsecs )
+        #rospy.loginfo("New callback time %i %i, img_time: %i %i, depth_time %i %i", now.secs, now.nsecs, img_msg.header.stamp.secs, img_msg.header.stamp.nsecs, depth_msg.header.stamp.secs, depth_msg.header.stamp.nsecs )
         original_img = self.bridge.imgmsg_to_cv2(img_msg , desired_encoding="rgb8")
         #original_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
         labeled_img, distribution = self.infer(original_img)
         self.publish_label_and_distribution(labeled_img, distribution, img_msg.header)
         
     def tf_init(self):
-
+        print("open graph..")
         with tf.gfile.GFile(self.network_config.path, 'rb') as f:
             self.graph_def = tf.GraphDef()
             self.graph_def.ParseFromString(f.read())
-
+        print("open graph complete")
 
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
