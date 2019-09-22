@@ -28,6 +28,7 @@
 #include <opencv2/core/matx.hpp>
 #include <unordered_map>
 #include <tuple>
+#include <math.h>
 
 
 using namespace std;
@@ -44,12 +45,12 @@ namespace SegmentationMapping {
         get_params(nh);
         
         // file.open("/home/fangkd/Desktop/time.txt");
-        pcl_pub = nh.advertise<sensor_msgs::PointCloud>(Pub_Topic_, 1);
-        pcl_sub.subscribe(nh, cloud_topic_, 30);
-        img_sub.subscribe(nh, image_topic_, 30);
-        cam_sub.subscribe(nh, cam_info_, 30);
-        dist_sub.subscribe(nh, dist_info_, 1);
-        sync_.reset(new Sync(MySyncPolicy(100), pcl_sub, img_sub, 
+        pcl_pub = nh.advertise<sensor_msgs::PointCloud>(Pub_Topic_, 5);
+        pcl_sub.subscribe(nh, cloud_topic_, 50);
+        img_sub.subscribe(nh, image_topic_, 50);
+        cam_sub.subscribe(nh, cam_info_, 50);
+        dist_sub.subscribe(nh, dist_info_, 5);
+        sync_.reset(new Sync(MySyncPolicy(200), pcl_sub, img_sub, 
                              cam_sub, dist_sub));
         sync_->registerCallback(boost::bind(&LidarProjection::callback, 
                                             this, _1, _2, _3, _4));
@@ -89,6 +90,8 @@ namespace SegmentationMapping {
                     const ImageLabelDistribution::ConstPtr& info);
 
     private:
+      int Lidar_max_range;
+
       string Pub_Topic_;
       string cloud_topic_;
       string image_topic_;
@@ -127,6 +130,7 @@ namespace SegmentationMapping {
   };
 
   void LidarProjection::get_params(ros::NodeHandle &nh_){
+    nh_.getParam("lidar_max_range", Lidar_max_range);
   	nh_.getParam("publish_to", Pub_Topic_);
     nh_.getParam("cloud_topic", cloud_topic_);
     nh_.getParam("image_topic", image_topic_);
@@ -241,15 +245,20 @@ namespace SegmentationMapping {
                                            const MatrixXf& dists){
 
     MatrixXf pointmat;
-    pointmat.resize(point.rows(), 4);
-    pointmat.block(0, 0, point.rows(), 3) = point;
-    pointmat.block(0, 3, point.rows(), 1) = MatrixXf::Constant(
-                                             point.rows(), 1, 1);
-    pointmat.transposeInPlace();
+    pointmat.resize(4, point.cols());
+    pointmat.block(0, 0, 3, point.cols()) = point;
+    pointmat.block(3, 0, 1, point.cols()) = MatrixXf::Constant(
+                                             1, point.cols(), 1);
+
+    // pointmat.resize(point.rows(), 4);
+    // pointmat.block(0, 0, point.rows(), 3) = point;
+    // pointmat.block(0, 3, point.rows(), 1) = MatrixXf::Constant(
+    //                                          point.rows(), 1, 1);
+    // pointmat.transposeInPlace();
     pointmat = Intrinsic * Extrinsic * pointmat;
-    // cout << pointmat.rows() << " " << pointmat.cols() << endl;
+    cout << "pointmat: " << pointmat.rows() << " " << pointmat.cols() << endl;
     vector<int> v;
-    for (size_t i = 0; i < point.rows(); i++){
+    for (size_t i = 0; i < point.cols(); i++){
       if (pointmat(2, i) > 0){
         if (pointmat(0, i)/pointmat(2, i) >= 0
          && pointmat(0, i)/pointmat(2, i) < WIDTH-1
@@ -259,7 +268,7 @@ namespace SegmentationMapping {
         }
       }
     }
-
+    // cout << "vector: " << v.size() << endl;
     MatrixXf inFrame = removePoints(pointmat, v);
     // cout << inFrame.rows() << " " << inFrame.cols() << endl;
 
@@ -274,9 +283,9 @@ namespace SegmentationMapping {
 
   MatrixXf LidarProjection::velo_point_filter(MatrixXf& velo_data){
     
-    MatrixXf x = velo_data.block(0, 0, velo_data.rows(), 1);
-    MatrixXf y = velo_data.block(0, 1, velo_data.rows(), 1);
-    MatrixXf z = velo_data.block(0, 2, velo_data.rows(), 1);
+    MatrixXf x = velo_data.block(0, 0, 1, velo_data.rows());
+    MatrixXf y = velo_data.block(0, 1, 1, velo_data.rows());
+    MatrixXf z = velo_data.block(0, 2, 1, velo_data.rows());
   
     MatrixXf dist = (x.array().pow(2) + 
                      y.array().pow(2) + z.array().pow(2)).array().pow(0.5);
@@ -289,11 +298,27 @@ namespace SegmentationMapping {
   void LidarProjection::set_pointcloud_matrix(
   	   const sensor_msgs::PointCloud2ConstPtr& msg){
     sensor_msgs::convertPointCloud2ToPointCloud(*msg, Cloud);
-    CloudMat.resize(Cloud.points.size(), 3);
+    // CloudMat.resize(3, Cloud.points.size());
+
+    vector<int> in_range;
+    int count = 0;
     for (int i = 0; i < Cloud.points.size(); i++){
-      CloudMat(i, 0) = Cloud.points[i].x;
-      CloudMat(i, 1) = Cloud.points[i].y;
-      CloudMat(i, 2) = Cloud.points[i].z;
+      if (sqrt(pow(Cloud.points[i].x, 2) + 
+        pow(Cloud.points[i].y, 2) + pow(Cloud.points[i].z, 2)) <= Lidar_max_range){
+        in_range.push_back(i);
+        count += 1;
+      }
+    }
+    CloudMat.resize(3, count);
+    // for (int i = 0; i < Cloud.points.size(); i++){
+    //   CloudMat(0, i) = Cloud.points[i].x;
+    //   CloudMat(1, i) = Cloud.points[i].y;
+    //   CloudMat(2, i) = Cloud.points[i].z;
+    // }
+    for (auto i = 0; i < in_range.size(); i++){
+      CloudMat(0, i) = Cloud.points[in_range[i]].x;
+      CloudMat(1, i) = Cloud.points[in_range[i]].y;
+      CloudMat(2, i) = Cloud.points[in_range[i]].z;
     }
   }
 
@@ -357,7 +382,7 @@ namespace SegmentationMapping {
     }
     
     for (size_t j = 0; j < pcl_info.size(); j++){
-      std::cout<<j<<", \nnew "<<          info->distribution.data[4300799]<<std::endl;
+      // std::cout<<j<<", \nnew "<<          info->distribution.data[4300799]<<std::endl;
       DistriCloud.points[j].x = Cloud.points[pcl_info[j]].x;
       DistriCloud.points[j].y = Cloud.points[pcl_info[j]].y;
       DistriCloud.points[j].z = Cloud.points[pcl_info[j]].z;
@@ -367,8 +392,8 @@ namespace SegmentationMapping {
       int max_l = -1;
       
       for (int k = 0; k < channel; k++){
-        std::cout<<"row "<<row<<", col "<<col<<", index "<<stride1 * row + stride2 * col + k<<std::endl;
-        std::cout<<info->distribution.data[stride1 * row + stride2 * col + k]<<"\n";
+        // std::cout<<"row "<<row<<", col "<<col<<", index "<<stride1 * row + stride2 * col + k<<std::endl;
+        // std::cout<<info->distribution.data[stride1 * row + stride2 * col + k]<<"\n";
         DistriCloud.channels[k+7].values[j] = 
           info->distribution.data[stride1 * row + stride2 * col + k];
 
@@ -378,7 +403,7 @@ namespace SegmentationMapping {
           max_l = k;
         }
       }
-      std::cout<<"max_l: "<<max_l<<std::endl;
+      // std::cout<<"max_l: "<<max_l<<std::endl;
       DistriCloud.channels[0].values[j] = max_l;
       DistriCloud.channels[1].values[j] = std::get<0>(label2color[max_l]);
       DistriCloud.channels[2].values[j] = std::get<1>(label2color[max_l]);
@@ -390,9 +415,9 @@ namespace SegmentationMapping {
       DistriCloud.channels[4].values[j] = red;
       DistriCloud.channels[5].values[j] = green;
       DistriCloud.channels[6].values[j] = blue;
-      std::cout<<"j"<<j<<std::endl;
+      // std::cout<<"j"<<j<<std::endl;
     }
-    std::cout<<"Finish generate distribution cloud\n";
+    // std::cout<<"Finish generate distribution cloud\n";
   }
 
 
@@ -409,12 +434,13 @@ namespace SegmentationMapping {
     set_intrinsic(cam);
 
     CloudMat = velo_point_filter(CloudMat);
-    
+    // cout << "CloudMat:" << CloudMat.rows() << " " << CloudMat.cols() << endl;
     // Visulization
-    // visualize_results(img);
+    visualize_results(img);
 
     set_label_pcl(img, info);
     DistriCloud.header = msg->header;
+    DistriCloud.header.frame_id = "/velodyne_actual";
     pcl_pub.publish(DistriCloud);
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
