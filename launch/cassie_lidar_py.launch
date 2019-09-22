@@ -4,7 +4,7 @@
 
 <launch>
 
-<!--  <param name="use_sim_time" value="true"/>-->
+  <!-- <param name="use_sim_time" value="true"/> -->
   
   <node pkg="SegmentationMapping" type="segmentation_node" name="segmentation_node" output="log" required="true">
 
@@ -23,8 +23,9 @@
 
   </node>
 
+  <!-- <node pkg="tf" type="static_transform_publisher" name="actual_lidar" args="0.1208 0.0300 -0.1901 0.474254 -0.45804 0.520269 0.542748 /camera_color_optical_frame /velodyne_actual 10" /> -->
 
-  <node pkg="SegmentationMapping" type="lidar_projection_node" name="single_camera" output="screen" required="true" launch-prefix="gdb -ex run --args" >
+  <node pkg="SegmentationMapping" type="lidar_projection_node" name="single_camera" output="screen" required="true" >
     <!-- <param name="quaternion" type="string" value="0.057 -0.075 -0.269 0.499 -0.495 0.503 0.502"/> -->
     <!--<rosparam param="imu2camera">[0.15204907, 0.02689208, 0.40570395, -0.4661439, 0.4669757, -0.5309942, 0.5316848]</rosparam>
         <rosparam param="imu2lidar">[-0.033, 0.000, -0.611, 0, 0, 0, 1]</rosparam>-->
@@ -37,6 +38,15 @@
     <param name="camera_info" type="string" value="/camera/color/camera_info"/>  
     <param name="distribution" type="string" value="/segmentation_node/distribution_topic"/>
   </node>
+
+  <node pkg="SegmentationMapping" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="screen" required="true"  >
+     <param name="color_topic"        type="string" value="/camera/color/image_raw" />
+     <param name="depth_topic"        type="string" value="/camera/aligned_depth_to_color/image_raw" />
+     <param name="depth_cam_topic"    type="string" value="/camera/aligned_depth_to_color/camera_info" />
+     <param name="label_topic"        type="string" value="/segmentation_node/label_topic" />
+     <param name="distribution_topic" type="string" value="/segmentation_node/distribution_topic" />
+     <param name="skip_every_k_frame" type="int"    value="1" />
+  </node> 
 
     <node pkg="SegmentationMapping" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen" required="true" >
 
@@ -64,7 +74,7 @@
     <!-- for semantic octomap generation -->
     <param name="octomap_enabled" type="bool" value="true"/>
     <param name="octomap_num_frames" type="int" value="3000" />
-    <param name="octomap_max_dist" type="int" value="50" />
+    <param name="octomap_max_dist" type="int" value="20" />
     <param name="octomap_resolution" type="double" value="0.20" />
     <param name="octomap_prob_hit" type="double" value="0.55" />
     <param name="octomap_prob_miss" type="double" value="0.3" />
