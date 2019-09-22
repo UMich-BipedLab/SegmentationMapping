@@ -30,6 +30,7 @@
     <!--<rosparam param="imu2camera">[0.15204907, 0.02689208, 0.40570395, -0.4661439, 0.4669757, -0.5309942, 0.5316848]</rosparam>
         <rosparam param="imu2lidar">[-0.033, 0.000, -0.611, 0, 0, 0, 1]</rosparam>-->
     <rosparam param="extrinsic_mat"> [0.0388,   -0.9992,   -0.0075, 0.0738, 0.1324,0.0126,-0.9911, 0.0279, 0.9904,0.0374,0.1328, -0.1829] </rosparam>
+    <param name="lidar_max_range" type="int" value="20"/>
     <param name="image_width" type="int" value="640"/>
     <param name="image_height" type="int" value="480"/>
     <param name="publish_to" type="string" value="/labeled_pointcloud"/>
@@ -39,14 +40,14 @@
     <param name="distribution" type="string" value="/segmentation_node/distribution_topic"/>
   </node>
 
-  <node pkg="SegmentationMapping" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="screen" required="true"  >
-     <param name="color_topic"        type="string" value="/camera/color/image_raw" />
-     <param name="depth_topic"        type="string" value="/camera/aligned_depth_to_color/image_raw" />
-     <param name="depth_cam_topic"    type="string" value="/camera/aligned_depth_to_color/camera_info" />
-     <param name="label_topic"        type="string" value="/segmentation_node/label_topic" />
-     <param name="distribution_topic" type="string" value="/segmentation_node/distribution_topic" />
-     <param name="skip_every_k_frame" type="int"    value="1" />
-  </node> 
+  <!-- <node pkg="SegmentationMapping" type="stereo_segmentation_node"  name="stereo_segmentation_node" output="screen" required="true"  > -->
+     <!-- <param name="color_topic"        type="string" value="/camera/color/image_raw" /> -->
+     <!-- <param name="depth_topic"        type="string" value="/camera/aligned_depth_to_color/image_raw" /> -->
+     <!-- <param name="depth_cam_topic"    type="string" value="/camera/aligned_depth_to_color/camera_info" /> -->
+     <!-- <param name="label_topic"        type="string" value="/segmentation_node/label_topic" /> -->
+     <!-- <param name="distribution_topic" type="string" value="/segmentation_node/distribution_topic" /> -->
+     <!-- <param name="skip_every_k_frame" type="int"    value="1" /> -->
+  <!-- </node>  -->
 
     <node pkg="SegmentationMapping" type="labeled_pc_map_node" name="labeled_pc_map_node" output="screen" required="true" >
 
