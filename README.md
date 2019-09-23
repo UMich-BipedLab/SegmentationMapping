@@ -30,11 +30,11 @@ Outputs (in ROS messages):
 ## Performance
 Tested on
 * AlienWare Laptop (running in realtime for the Cassie Blue experiement): 3FPS on i7-6820, 32GB RAM, GTX1070
-* Dell XPS: 4FPS on i7-7700, 32GB RAM, GTX1070.
-* Jetson Xavier: coming...
+* Dell XPS: 5FPS on i7-7700, 32GB RAM, GTX1070.
+* Jetson Xavier: Around 2.7Hz
 
 ## Dependencies
-ROS: Tested on Kinetic and Ubuntu 16.04
+ROS: Tested on Kinetic + Ubuntu 16.04, Melodic + Ubuntu 18.04
 
 Neural Network: 
 * `tensorflow-gpu-1.8.0` 
