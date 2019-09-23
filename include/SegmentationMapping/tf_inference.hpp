@@ -286,14 +286,13 @@ namespace segmentation_projection {
 
     // convert to output cv mat and Eigen Mat
     
-    //cv::Mat out_label_img(input_shape[1], input_shape[2], CV_32SC1, label_img_flat);
-    //out_label_img.convertTo(label_output, CV_8UC1);
-    cv::Mat out_distribution_img(rgb.rows, rgb.cols, CV_32FC(raw_network_output_shape[3]), distribution_flat);
-    //distribution_output = out_distribution_img.clone();
+    cv::Mat out_label_img(input_shape[1], input_shape[2], CV_32SC1, label_img_flat);
+    out_label_img.convertTo(label_output, CV_8UC1);
+    cv::Mat distribution_img(rgb.rows, rgb.cols, CV_32FC(raw_network_output_shape[3]), distribution_flat);
+    distribution_output = out_distribution_img;
 
     
-    // forming an array of matrices is a quite efficient operation,
-    // because the matrix data is not copied, only the headers
+    /*
     cv::Mat classes(rgb.rows, rgb.cols, num_class );
     //    cv::Mat background(rgb.rows, rgb.cols, )
     // rgba[0] -> bgr[2], rgba[1] -> bgr[1],
@@ -305,6 +304,7 @@ namespace segmentation_projection {
     }
     cv::mixChannels( out_distribution_img, 1, classes, 1, channel_ind_map.data(), num_class);
     cv::exp(classes, classes);
+    */
     //if (rgb.rows > out_label_img.rows || rgb.cols > out_label_img.cols) {
     //   cv::resize(label_output, label_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN  );
     //  cv::resize(distribution_output, distribution_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN   );

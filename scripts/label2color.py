@@ -15,7 +15,7 @@ label_to_color = {
     10: (192,192,192), # pole
     12: (250,250,0 ), # traffic sign
     6: (107,142, 35), # vegetation
-    4: (128,128,0), # terrain
+    4: (128,128, 0 ), # terrain
     13: ( 135, 206, 235 ),  # sky
     1: (  30, 144, 250 ),  # water
     8 :(220, 20, 60), # person

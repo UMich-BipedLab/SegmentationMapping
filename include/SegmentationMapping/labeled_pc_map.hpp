@@ -692,6 +692,9 @@ namespace SegmentationMapping {
     curr_t = ros::Time::now();
     ROS_DEBUG_STREAM("Build PointSeg at time "<<uint32_t(curr_t.toSec())<<". "<<uint32_t(curr_t.toNSec()) );
     std::cout<<"At time "<<cloud_msg->header.stamp.toSec()<<", # of lidar pts is "<<cloud_msg->points.size()<<std::endl;
+    std::string name_pcd = std::to_string(cloud_msg->header.stamp.toNSec());
+    pcl::io::savePCDFile ( name_pcd + ".pcd", pointcloud_seg);
+    
 
     // fetch the tf transform at that time
     tf::StampedTransform transform;
@@ -727,9 +730,9 @@ namespace SegmentationMapping {
           continue;
       
         // pack r/g/b into rgb
-        uint8_t r = cloud_msg->channels[1].values[i];
-        uint8_t g = cloud_msg->channels[2].values[i];
-        uint8_t b = cloud_msg->channels[3].values[i];    // Example: Red color
+        uint8_t r = cloud_msg->channels[4].values[i];
+        uint8_t g = cloud_msg->channels[5].values[i];
+        uint8_t b = cloud_msg->channels[6].values[i];    // Example: Red color
         uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
         p.rgb = *reinterpret_cast<float*>(&rgb);
         pointcloud_pcl.push_back(p);

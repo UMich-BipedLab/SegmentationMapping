@@ -78,9 +78,9 @@ namespace SegmentationMapping {
       color_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, color_topic_, 50);
       depth_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, depth_topic_, 50);
       depth_cam_sub_ = new message_filters::Subscriber<sensor_msgs::CameraInfo> (pnh, depth_cam_topic_, 50);
-      label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, label_topic_, 2);
-      distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, distribution_topic_, 2);
-      sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(120), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
+      label_sub_ = new message_filters::Subscriber<sensor_msgs::Image> (pnh, label_topic_, 5);
+      distribution_sub_ = new message_filters::Subscriber<ImageLabelDistribution> (pnh, distribution_topic_, 5);
+      sync_ = new message_filters::Synchronizer<sync_pol> (sync_pol(300), *depth_sub_, *color_sub_, *depth_cam_sub_, *label_sub_, *distribution_sub_);
       
       sync_->registerCallback(boost::bind(&StereoSegmentation::DepthColorCallback, this,_1, _2, _3, _4, _5));
       
@@ -233,8 +233,9 @@ namespace SegmentationMapping {
     Depth2PointCloud1(depth_msg, color_msg, true, label_ptr->image, distribution_output);
 
     // Debugging
-    //Depth2PointCloud2(depth_msg, color_msg, false, label_ptr->image);
-
+#ifndef NDEBUG
+    Depth2PointCloud2(depth_msg, color_msg, false, label_ptr->image);
+#endif
     //curr_t = ros::Time::now();
     //ROS_DEBUG_STREAM("Callback ends at time "<<uint32_t(curr_t.toSec())<<". "<<(uint32_t)curr_t.toNSec() );
 
@@ -296,14 +297,14 @@ namespace SegmentationMapping {
       for (int u = 0; u < int(depth_msg->width); ++u, color += color_step, ++i) {
 
       // Skip the upper half of the image
-      if (v < int(depth_msg->height / 2))
-        continue;
+      //if (v < int(depth_msg->height / 2))
+      //  continue;
       
       uint16_t depth = depth_row[u];
 
       // Check for invalid measurements
       geometry_msgs::Point32 p;
-      if (depth <= 0) {
+      if (depth <= 0 ) {
         p.x = p.y = p.z = bad_point;
       }
       else {
@@ -312,6 +313,10 @@ namespace SegmentationMapping {
         p.y = (v - center_y) * depth * constant_y;
         p.z = (float) depth * unit_scaling;
       }
+
+      if (depth > 0)
+      	if (sqrt(p.x * p.x + p.y * p.y + p.z * p.z) > 9)
+          p.x = p.y = p.z = bad_point;
 
       cloud_msg->points.push_back(p);
 
@@ -440,13 +445,14 @@ namespace SegmentationMapping {
         ++iter_x, ++iter_y, ++iter_z, ++iter_a, ++iter_r, ++iter_g, ++iter_b) {
       
       // Skip the upper half of the image
-      if (v < int(cloud_msg->height / 2))
-        continue;
+      //if (v < int(cloud_msg->height / 2))
+      // continue;
 
       uint16_t depth = depth_row[u];
       
       // Check for invalid measurements
-      if (depth <= 0)
+      // update by Kaiduo Fang: depth > 9, max_depth.
+      if (depth <= 0 || depth > 9)
         *iter_x = *iter_y = *iter_z = bad_point;
       else {
         // Fill in XYZ

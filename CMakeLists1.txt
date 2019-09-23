@@ -4,7 +4,6 @@ project(SegmentationMapping)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 SET(CMAKE_BUILD_TYPE Release)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 ")
 
 #SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 #SET(ENV{TENSORFLOW_SOURCE_DIR} "/home/biped/thirdparty/tensorflow/")
@@ -24,8 +23,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 ")
 find_package(catkin REQUIRED COMPONENTS
   message_filters
   rospy
-  roscpp
-  #octomap
+  octomap
   sensor_msgs
   geometry_msgs
   nav_msgs
@@ -63,15 +61,12 @@ message(${PCL_LIBRARY_DIRS})
 
 find_package(octomap REQUIRED)
 include_directories(${OCTOMAP_INCLUDE_DIRS})
-link_libraries(${OCTOMAP_LIBRARIES})
-message("octomap include dir is ${OCTOMAP_INCLUDE_DIRS} and ${OCTOMAP_LIBRARY_DIRS} and ${OCTOMAP_LIBRARIES}")
+link_directories(${OCTOMAP_LIBRARY_DIRS})
+message(${OCTOMAP_INCLUDE_DIRS})
 
-find_package(octomap_ros REQUIRED)
-include_directories(${octomap_ros_INCLUDE_DIRS})
-message("octomap_ros include dir is ${octomap_ros_INCLUDE_DIRS}")
 
-#SET(OpenCV_DIR /home/cassie/sd_card/thirdparty/opencv3.4/opencv/build/)
 find_package(OpenCV REQUIRED)
+
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -158,9 +153,9 @@ catkin_python_setup()
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include/SegmentationMapping 
+  INCLUDE_DIRS include/SegmentationMapping
 #  LIBRARIES segmentation_projection
-  CATKIN_DEPENDS message_filters rospy sensor_msgs message_runtime 
+  CATKIN_DEPENDS message_filters rospy sensor_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -176,7 +171,7 @@ ${catkin_INCLUDE_DIRS}
 ${PCL_INCLUDE_DIRS}
 ${EIGEN_INCLUDE_DIR}
 ${OCTOMAP_INCLUDE_DIRS}
-${octomap_ros__INCLUDE_DIRS}
+
 )
 
 
@@ -198,7 +193,7 @@ add_executable(labeled_pc_map_node src/labeled_pc_map_node.cpp)
 #add_executable(nclt_map_node      src/rvsm_nclt_node.cpp)
 #add_executable(query_semantic_tree src/query_semantic_tree.cpp)
 add_executable(stereo_segmentation_node src/stereo_segmentation_node.cpp)
-add_executable(lidar_projection_node src/lidar_projection_node.cpp)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -210,14 +205,12 @@ add_executable(lidar_projection_node src/lidar_projection_node.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_dependencies(stereo_segmentation_node ${catkin_EXPORTED_TARGETS})
-add_dependencies(lidar_projection_node ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
 target_link_libraries(labeled_pc_map_node
-  ${OCTOMAP_LIBRARIES}
-  ${octomap_ros_LIBRARIES}
   ${catkin_LIBRARIES}
   ${PCL_COMMON_LIBRARIES}
   ${PCL_IO_LIBRARIES}
+  ${OCTOMAP_LIBRARIES}
 )
 #target_link_libraries(nclt_map_node
 #  ${catkin_LIBRARIES}
@@ -238,12 +231,6 @@ target_link_libraries(stereo_segmentation_node #  PRIVATE TensorFlow_DEP
   ${OpenCV_LIBS}
 )
 
-target_link_libraries(lidar_projection_node
-  ${EIGEN_INCLUDE_DIR}
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBS}
-)
-
 #############
 ## Install ##
 #############
@@ -254,9 +241,7 @@ target_link_libraries(lidar_projection_node
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-  scripts/segmentation_projection_node  scripts/projection.py scripts/gt_pose2bag.py  scripts/helper.py
-  scripts/segmentation_node
-  scripts/segmentation_node_two_camera
+   scripts/segmentation_projection_node  scripts/projection.py scripts/gt_pose2bag.py  scripts/helper.py  scripts/segmentation_node
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 
