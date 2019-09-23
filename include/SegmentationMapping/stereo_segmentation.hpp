@@ -304,7 +304,7 @@ namespace SegmentationMapping {
 
       // Check for invalid measurements
       geometry_msgs::Point32 p;
-      if (depth <= 0) {
+      if (depth <= 0 || depth > 9) {
         p.x = p.y = p.z = bad_point;
       }
       else {
@@ -447,7 +447,8 @@ namespace SegmentationMapping {
       uint16_t depth = depth_row[u];
       
       // Check for invalid measurements
-      if (depth <= 0)
+      // update by Kaiduo Fang: depth > 9, max_depth.
+      if (depth <= 0 || depth > 9)
         *iter_x = *iter_y = *iter_z = bad_point;
       else {
         // Fill in XYZ
