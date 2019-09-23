@@ -77,10 +77,10 @@ namespace SegmentationMapping {
       , pointcloud_seg_stacked_ptr_(new typename pcl::PointCloud<pcl::PointSegmentedDistribution<NUM_CLASS>>)
       , path_visualization_enabled_(true)
       , color_octomap_enabled_(true)
-      , occupancy_grid_enabled_(false)
+      , occupancy_grid_enabled_(true)
       , occupancy_grid_noise_percent_(false)
-      , cost_map_enabled_(false)
-      , octomap_enabled_(false)
+      , cost_map_enabled_(true)
+      , octomap_enabled_(true)
       , octomap_resolution_(0.1)
         //, octree_ptr_(new octomap::ColorOcTree(0.1))
       , octomap_frame_counter_(0)
@@ -417,12 +417,12 @@ namespace SegmentationMapping {
                                                       float resolution) {
     static std::vector <std::vector <float> > neighbor_offsets {
       {0,0,0},
-      {0, 0, 0-resolution},
-      {0, 0, 0+resolution},
-      {0-resolution, 0, 0},
-      {0+resolution, 0, 0},
-      {0, 0-resolution, 0},
-      {0, 0+resolution, 0},
+      // {0, 0, 0-resolution},
+      // {0, 0, 0+resolution},
+      // {0-resolution, 0, 0},
+      // {0+resolution, 0, 0},
+      // {0, 0-resolution, 0},
+      // {0, 0+resolution, 0},
     };
     std::vector<float> label_dist(labeled_pt.label_distribution, std::end(labeled_pt.label_distribution));
     for (auto && offset : neighbor_offsets) {
@@ -730,9 +730,9 @@ namespace SegmentationMapping {
           continue;
       
         // pack r/g/b into rgb
-        uint8_t r = cloud_msg->channels[1].values[i];
-        uint8_t g = cloud_msg->channels[2].values[i];
-        uint8_t b = cloud_msg->channels[3].values[i];    // Example: Red color
+        uint8_t r = cloud_msg->channels[4].values[i];
+        uint8_t g = cloud_msg->channels[5].values[i];
+        uint8_t b = cloud_msg->channels[6].values[i];    // Example: Red color
         uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
         p.rgb = *reinterpret_cast<float*>(&rgb);
         pointcloud_pcl.push_back(p);

@@ -228,6 +228,7 @@ namespace SegmentationMapping {
   }
 
   vector<int> LidarProjection::depth_color(MatrixXf& depth){
+    // cout << depth.rows() << " " << depth.cols() << endl;
     vector<int> color;
     for (int i = 0; i < depth.cols(); i++){
       if (depth(0, i) < MIN_DIS)
@@ -256,7 +257,7 @@ namespace SegmentationMapping {
     //                                          point.rows(), 1, 1);
     // pointmat.transposeInPlace();
     pointmat = Intrinsic * Extrinsic * pointmat;
-    cout << "pointmat: " << pointmat.rows() << " " << pointmat.cols() << endl;
+    // cout << "pointmat: " << pointmat.rows() << " " << pointmat.cols() << endl;
     vector<int> v;
     for (size_t i = 0; i < point.cols(); i++){
       if (pointmat(2, i) > 0){
@@ -272,23 +273,24 @@ namespace SegmentationMapping {
     MatrixXf inFrame = removePoints(pointmat, v);
     // cout << inFrame.rows() << " " << inFrame.cols() << endl;
 
-    MatrixXf new_dist = dist_info(dists, v);
+    // MatrixXf new_dist = dist_info(dists, v);
     // cout << new_dist.rows() << " " << new_dist.cols() << endl;
 
-    color_info = depth_color(new_dist);
+    // color_info = depth_color(new_dist);
     pcl_info = v;
     // cout << inFrame.cols() << endl;
     return inFrame;
   }
 
   MatrixXf LidarProjection::velo_point_filter(MatrixXf& velo_data){
-    
-    MatrixXf x = velo_data.block(0, 0, 1, velo_data.rows());
-    MatrixXf y = velo_data.block(0, 1, 1, velo_data.rows());
-    MatrixXf z = velo_data.block(0, 2, 1, velo_data.rows());
+    // cout << velo_data.rows() << " " << velo_data.cols() << endl;
+    MatrixXf x = velo_data.block(0, 0, 1, velo_data.cols());
+    MatrixXf y = velo_data.block(1, 0, 1, velo_data.cols());
+    MatrixXf z = velo_data.block(2, 0, 1, velo_data.cols());
   
     MatrixXf dist = (x.array().pow(2) + 
                      y.array().pow(2) + z.array().pow(2)).array().pow(0.5);
+    // cout << dist.cols() << endl;
     // cout << velo_data.rows() << " " << velo_data.cols() << endl;
     MatrixXf points = point_in_frame(velo_data, dist);
   
@@ -416,10 +418,19 @@ namespace SegmentationMapping {
       DistriCloud.channels[5].values[j] = green;
       DistriCloud.channels[6].values[j] = blue;
       // std::cout<<"j"<<j<<std::endl;
+
+      // debuging with visualization.
+      // cv::circle(image, cv::Point(round(CloudMat(0, j)),
+      //            round(CloudMat(1, j))), 2, 
+      //            cv::Scalar(std::get<0>(label2color[max_l]), 
+      //                       std::get<1>(label2color[max_l]), 
+      //                       std::get<2>(label2color[max_l])), -1);
     }
     // std::cout<<"Finish generate distribution cloud\n";
+    // cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+    // cv::imshow("image", image);
+    // cv::waitKey(5);
   }
-
 
   void LidarProjection::callback(const sensor_msgs::PointCloud2ConstPtr& msg,
                                  const sensor_msgs::ImageConstPtr& img,
@@ -436,7 +447,7 @@ namespace SegmentationMapping {
     CloudMat = velo_point_filter(CloudMat);
     // cout << "CloudMat:" << CloudMat.rows() << " " << CloudMat.cols() << endl;
     // Visulization
-    visualize_results(img);
+    // visualize_results(img);
 
     set_label_pcl(img, info);
     DistriCloud.header = msg->header;

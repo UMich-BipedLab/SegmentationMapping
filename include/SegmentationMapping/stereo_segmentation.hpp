@@ -8,6 +8,7 @@
 #include <cassert>
 #include <tuple>
 #include <unordered_map>
+#include <math.h>
 // ros
 #include <ros/ros.h>
 #include <ros/console.h>
@@ -182,14 +183,14 @@ namespace SegmentationMapping {
     ros::Time curr_t = ros::Time::now();
     ROS_DEBUG_STREAM("Callback starts at time "<<uint32_t(curr_t.toSec())<<". "<<(uint32_t)curr_t.toNSec() );
     
-    std::cout << "depth: " << depth_msg->header.stamp << std::endl;
-    std::cout << "color: " << color_msg->header.stamp << std::endl;
-    std::cout << "camera_info: " << camera_info_msg->header.stamp << std::endl;
-    std::cout << "labeled_msg: " << labeled_msg->header.stamp << std::endl;
-    std::cout << "distribution_msg: " << distribution_msg->header.stamp << std::endl;
+    // std::cout << "depth: " << depth_msg->header.stamp << std::endl;
+    // std::cout << "color: " << color_msg->header.stamp << std::endl;
+    // std::cout << "camera_info: " << camera_info_msg->header.stamp << std::endl;
+    // std::cout << "labeled_msg: " << labeled_msg->header.stamp << std::endl;
+    // std::cout << "distribution_msg: " << distribution_msg->header.stamp << std::endl;
 
 
-    std::cout<<"DepthColorCallback: New callback"<< depth_msg->header.frame_id <<"\n";
+    // std::cout<<"DepthColorCallback: New callback"<< depth_msg->header.frame_id <<"\n";
     // Check for bad inputs
     if (depth_msg->header.frame_id != color_msg->header.frame_id) {
       ROS_ERROR("Depth iamge frame id [%s] doesn't match color image frame id [%s]",
@@ -293,6 +294,7 @@ namespace SegmentationMapping {
 
     // Iterate through depth image
     int i = 0;  // num of point
+    int points_count = 0;
     for (int v = 0; v < int(depth_msg->height); ++v, depth_row += row_step, color += color_skip){
       for (int u = 0; u < int(depth_msg->width); ++u, color += color_step, ++i) {
 
@@ -303,8 +305,12 @@ namespace SegmentationMapping {
       uint16_t depth = depth_row[u];
 
       // Check for invalid measurements
+      // Kaiduo Fang: max_depth = 9;
       geometry_msgs::Point32 p;
-      if (depth <= 0 || depth > 9) {
+      float range = sqrt(pow((u - center_x) * depth * constant_x, 2) + 
+                         pow((v - center_y) * depth * constant_y, 2) + 
+                         pow((float) depth * unit_scaling, 2));
+      if (depth <= 0 || range > 9) {
         p.x = p.y = p.z = bad_point;
       }
       else {
@@ -312,6 +318,7 @@ namespace SegmentationMapping {
         p.x = (u - center_x) * depth * constant_x;
         p.y = (v - center_y) * depth * constant_y;
         p.z = (float) depth * unit_scaling;
+        points_count += 1;
       }
 
       cloud_msg->points.push_back(p);
@@ -370,11 +377,10 @@ namespace SegmentationMapping {
           distribution_channel[i].values.push_back(0);
         }
       }
-
-
-
     }
    }
+    std::cout << "count_points: " << points_count << std::endl << std::endl;
+
     
     cloud_msg->channels.push_back(label_channel);
     cloud_msg->channels.push_back(r_channel);
@@ -447,8 +453,8 @@ namespace SegmentationMapping {
       uint16_t depth = depth_row[u];
       
       // Check for invalid measurements
-      // update by Kaiduo Fang: depth > 9, max_depth.
-      if (depth <= 0 || depth > 9)
+      // update by Kaiduo Fang: depth > 9, max_depth;
+      if (depth <= 0)
         *iter_x = *iter_y = *iter_z = bad_point;
       else {
         // Fill in XYZ
