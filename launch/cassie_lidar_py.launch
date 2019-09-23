@@ -74,7 +74,7 @@
     <param name="octomap_num_frames" type="int" value="3000" />
     <param name="octomap_max_dist" type="int" value="17" />
     <param name="octomap_resolution" type="double" value="0.20" />
-    <param name="octomap_prob_hit" type="double" value="0.55" />
+    <param name="octomap_prob_hit" type="double" value="0.53" />
     <param name="octomap_prob_miss" type="double" value="0.3" />
     <param name="octomap_occupy_thresh" type="double" value="0.4" />
   </node>

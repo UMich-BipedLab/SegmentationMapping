@@ -54,6 +54,24 @@ namespace SegmentationMapping {
                              cam_sub, dist_sub));
         sync_->registerCallback(boost::bind(&LidarProjection::callback, 
                                             this, _1, _2, _3, _4));
+
+
+    label2color[2]  =std::make_tuple(250, 250, 250 ); // road
+    //label2color[3]  =std::make_tuple(128, 64,  128 ); // sidewalk
+    label2color[3]  =std::make_tuple(250, 250,  250 ); // sidewalk
+    label2color[5]  =std::make_tuple(250, 128, 0   ); // building
+    label2color[10] =std::make_tuple(192, 192, 192 ); // pole
+    label2color[12] =std::make_tuple(250, 250, 0   ); // sign
+    label2color[6]  =std::make_tuple(0  , 100, 0   ); // vegetation
+    label2color[4]  =std::make_tuple(128, 128, 0   ); // terrain
+    label2color[13] =std::make_tuple(135, 206, 235 ); // sky
+    label2color[1]  =std::make_tuple( 30, 144, 250 ); // water
+    label2color[8]  =std::make_tuple(220, 20,  60  ); // person
+    label2color[7]  =std::make_tuple( 0, 0,142     ); // car
+    label2color[9]  =std::make_tuple(119, 11, 32   ); // bike
+    label2color[11] =std::make_tuple(123, 104, 238 ); // stair
+    label2color[0]  =std::make_tuple(255, 255, 255 ); // background
+
       }
 
       void get_params(ros::NodeHandle &nh_);
@@ -105,6 +123,7 @@ namespace SegmentationMapping {
       MatrixXf Intrinsic;
       vector<int> color_info;
       vector<int> pcl_info;
+      std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
   
       message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub;
       message_filters::Subscriber<sensor_msgs::Image> img_sub;
@@ -359,24 +378,7 @@ namespace SegmentationMapping {
     DistriCloud.points.resize(CloudMat.cols());
     DistriCloud.channels.resize(channel+7);
 
-    std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
-    label2color[2]  =std::make_tuple(250, 250, 250 ); // road
-    //label2color[3]  =std::make_tuple(128, 64,  128 ); // sidewalk
-    label2color[3]  =std::make_tuple(250, 250,  250 ); // sidewalk
-    label2color[5]  =std::make_tuple(250, 128, 0   ); // building
-    label2color[10] =std::make_tuple(192, 192, 192 ); // pole
-    label2color[12] =std::make_tuple(250, 250, 0   ); // sign
-    label2color[6]  =std::make_tuple(0  , 100, 0   ); // vegetation
-    label2color[4]  =std::make_tuple(128, 128, 0   ); // terrain
-    label2color[13] =std::make_tuple(135, 206, 235 ); // sky
-    label2color[1]  =std::make_tuple( 30, 144, 250 ); // water
-    label2color[8]  =std::make_tuple(220, 20,  60  ); // person
-    label2color[7]  =std::make_tuple( 0, 0,142     ); // car
-    label2color[9]  =std::make_tuple(119, 11, 32   ); // bike
-    label2color[11] =std::make_tuple(123, 104, 238 ); // stair
-    label2color[0]  =std::make_tuple(255, 255, 255 ); // background
-
-    cv::Mat image = cv_bridge::toCvCopy(img, "bgr8")->image;
+    cv::Mat image = cv_bridge::toCvCopy(img, "rgb8")->image;
     cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
     
     for (int i = 0; i < channel+7; i++){

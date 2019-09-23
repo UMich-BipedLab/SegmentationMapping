@@ -265,6 +265,12 @@ namespace SegmentationMapping {
     g_channel.name = "g";
     sensor_msgs::ChannelFloat32 b_channel;
     b_channel.name = "b";
+    sensor_msgs::ChannelFloat32 r_original_channel;
+    r_channel.name = "r_original";
+    sensor_msgs::ChannelFloat32 g_original_channel;
+    g_channel.name = "g_original";
+    sensor_msgs::ChannelFloat32 b_original_channel;
+    b_channel.name = "b_original";
 
     sensor_msgs::ChannelFloat32 distribution_channel[NUM_CLASS];
 
@@ -364,7 +370,9 @@ namespace SegmentationMapping {
         r_channel.values.push_back(std::get<0>(label2color[label]));
         g_channel.values.push_back(std::get<1>(label2color[label]));
         b_channel.values.push_back(std::get<2>(label2color[label]));
-
+        r_original_channel.values.push_back(color[0]);
+        g_original_channel.values.push_back(color[1]);
+        b_original_channel.values.push_back(color[2]);
         
       } else {
         // Fill in r g b channels: bgr
@@ -387,9 +395,9 @@ namespace SegmentationMapping {
     cloud_msg->channels.push_back(r_channel);
     cloud_msg->channels.push_back(g_channel);
     cloud_msg->channels.push_back(b_channel);
-    cloud_msg->channels.push_back(r_channel);
-    cloud_msg->channels.push_back(g_channel);
-    cloud_msg->channels.push_back(b_channel);
+    cloud_msg->channels.push_back(r_original_channel );
+    cloud_msg->channels.push_back(g_original_channel);
+    cloud_msg->channels.push_back(b_original_channel);
     for (int i = 0; i < NUM_CLASS; i++)
       cloud_msg->channels.push_back(distribution_channel[i]);
 

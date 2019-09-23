@@ -488,9 +488,9 @@ namespace SegmentationMapping {
         pcl::PointSegmentedDistribution<NUM_CLASS> p = transformed_pc[i];
 
         uint32_t rgb = *reinterpret_cast<int*>(&p.rgb);
-        uint8_t b = (rgb >> 16) & 0x0000ff;
+        uint8_t r = (rgb >> 16) & 0x0000ff;
         uint8_t g = (rgb >> 8)  & 0x0000ff;
-        uint8_t r = (rgb)       & 0x0000ff;
+        uint8_t b = (rgb)       & 0x0000ff;
         float x = p.x;
         float y = p.y;
         float z = p.z; // for NCLT only
