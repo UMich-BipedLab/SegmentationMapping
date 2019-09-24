@@ -40,7 +40,8 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 
-
+option(USE_TF_C_LIB "Use Tensorflow C api " OFF) #OFF by default
+if (USE_TF_C_LIB)
 set(TENSORFLOW_DIR /home/cassie/sd_card/thirdparty/tensorflow/)
 include_directories(${TENSORFLOW_DIR})
 include_directories(${TENSORFLOW_DIR}/tensorflow)
@@ -51,15 +52,15 @@ include_directories(${TENSORFLOW_DIR}/bazel-genfiles)
 include_directories(${TENSORFLOW_DIR}/tensorflow/cc)
 include_directories(${TENSORFLOW_DIR}/tensorflow/core)
 link_directories(${TENSORFLOW_DIR}/bazel-bin/tensorflow)
-
-
-#SET(EIGEN_INCLUDE_DIR /usr/include/eigen3)
+else()
+SET(EIGEN_INCLUDE_DIR /usr/include/eigen3)
 #SET(EIGEN_INCLUDE_DIR /usr/local/include/eigen3)
 #find_package (Eigen3  REQUIRED )
 #IF( NOT EIGEN3_INCLUDE_DIR )
 #    MESSAGE( FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
 #ENDIF()
 #message(${EIGEN3_INCLUDE_DIR})
+endif(USE_TF_C_LIB)
 
 
 ## System dependencies are found with CMake's conventions
