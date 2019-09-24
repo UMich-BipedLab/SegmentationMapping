@@ -232,7 +232,7 @@ target_link_libraries(labeled_pc_map_node
   ${catkin_LIBRARIES}
   ${PCL_COMMON_LIBRARIES}
   ${PCL_IO_LIBRARIES}
-  ${TENSORFLOW_DIR}/bazel-bin/tensorflow/libtensorflow.so
+  #${TENSORFLOW_DIR}/bazel-bin/tensorflow/libtensorflow.so
 
 )
 #target_link_libraries(nclt_map_node
@@ -252,7 +252,7 @@ target_link_libraries(stereo_segmentation_node #  PRIVATE TensorFlow_DEP
   ${EIGEN_INCLUDE_DIR}
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
-  ${TENSORFLOW_DIR}/bazel-bin/tensorflow/libtensorflow.so
+  #${TENSORFLOW_DIR}/bazel-bin/tensorflow/libtensorflow.so
 )
 
 target_link_libraries(lidar_projection_node
