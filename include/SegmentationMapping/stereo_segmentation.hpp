@@ -45,7 +45,6 @@
 // for the PointSegmentedDistribution class
 #include "PointSegmentedDistribution.hpp"
 #include "SegmentationMapping/ImageLabelDistribution.h"
-//#include "tf_inference.hpp"
 
 
 //namespace tf = tensorflow;

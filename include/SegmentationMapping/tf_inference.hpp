@@ -12,8 +12,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-
-namespace segmentation_projection {
+namespace SegmentationMapping {
   class tfInference {
   public:
     tfInference(const std::string & frozen_tf_graph,
@@ -39,7 +38,8 @@ namespace segmentation_projection {
 
      */
     void segmentation(const cv::Mat & rgb, int num_class,
-                      cv::Mat & label_output, cv::Mat & distribution_output);
+                      cv::Mat & label_output, cv::Mat & distribution_output,
+                      bool & is_successful);
 
 
 
@@ -110,7 +110,7 @@ namespace segmentation_projection {
     TF_Buffer* buf = TF_NewBuffer();
     buf->data = data;
     buf->length = fsize;
-    buf->data_deallocator = [=](void * data_to_free, size_t){ std::free(data_to_free);};
+    buf->data_deallocator = [](void * data_to_free, long unsigned int){ std::free(data_to_free);};
     std::cout<<"Read graph buffer "<<file<<", size "<<fsize<<std::endl;
     return buf;
   }
@@ -164,7 +164,7 @@ namespace segmentation_projection {
     //TF_Output  inputs[1] = {{input_op, 0}};
     TF_Output  outputs[1] = {// {output_label_op , 0},
                               {output_distribution_op, 0} };
-    raw_network_distribution_shape = get_tensor_dims(outputs[0]);
+    //raw_network_distribution_shape = get_tensor_dims(outputs[0]);
     
 
     /*
@@ -217,55 +217,35 @@ namespace segmentation_projection {
 
 
   void tfInference::segmentation(const cv::Mat & rgb, int num_class,
-                                 cv::Mat & label_output, cv::Mat & distribution_output) {
-    // cv::mat assumes rgb!!
-    /*
-    assert (rgb.rows <= 400 || rgb.cols <= 800);
-    cv::Mat input_rgb = rgb;
-    if (input_shape[1] > rgb.rows || input_shape[2] > rgb.cols) {
-      int diff_width = - rgb.cols + input_shape[2];
-      int diff_height = - rgb.rows + input_shape[1];
-      input_rgb = cv::Mat(input_shape[1], input_shape[2], CV_32FC3, 0.0);
-      cv::Mat pRoi = input_rgb(cv::Rect(diff_width / 2, diff_height / 2, rgb.cols, rgb.rows));
-      pRoi = input_rgb.clone();
-      cv::namedWindow("input to neural net", CV_WINDOW_AUTOSIZE);
-      cv::imshow("input_to_neural_net", input_rgb);
-      cv::waitKey(500);
-    }
-    */
+                                 cv::Mat & label_output, cv::Mat & distribution_output,
+                                 bool & is_successful) {
 
-    const cv::Mat input_img_data = rgb;
+    cv::Mat input_img_data = rgb;
+    rgb.convertTo(input_img_data, CV_32FC3);
     
-    //cv::resize(rgb, input_img_data, cv::Size(input_shape[2],input_shape[1] ),0, 0 );
-
-    // setting up input image tensor
-    
-    //input_img_data.convertTo(input_img_data, CV_32FC3);
-
-
     TF_Tensor* input_img_tensor[1];
     std::vector<std::int64_t> input_shape = {1, rgb.rows, rgb.cols, 3};
-    input_img_tensor[0] = data_to_tensor(TF_UINT8,
+    input_img_tensor[0] = data_to_tensor(TF_FLOAT,
                                          input_shape.data(), input_shape.size(),
                                          input_img_data.data,
                                          input_img_data.elemSize() * input_img_data.total());
     if (input_img_tensor[0] == nullptr) {
-      std::cout<<"input tensor creation fails\n";
-      return;
+      std::cout<<"Error: input tensor creation fails\n";
+      is_successful = false;
+      return ;
     }
     
     // setting up input/output 
     TF_Output  inputs[1] = {{input_op, 0}};
-    TF_Output  outputs[1] = { {output_label_op , 0},
+    TF_Output  outputs[2] = { {output_label_op , 0},
                               {output_distribution_op, 0} };
 
     //std::cout<<"Input data type is "<<TF_OperationOutputType(inputs[0])<<", shape is "<<input_shape[1]<<","<< input_shape[2] <<std::endl;
-
     //std::cout<<"Output label data type is "<<TF_OperationOutputType(outputs[0])<<", distribution data type is "<<TF_OperationOutputType(outputs[1])<<std::endl;
     
     
     // neural net inference
-    TF_Tensor * output_tensors[2];
+    TF_Tensor * output_tensors[] = {nullptr, nullptr} ;
     TF_SessionRun(tf_sess,
                   nullptr,
                   inputs,  input_img_tensor, 1,
@@ -274,9 +254,13 @@ namespace segmentation_projection {
                   );
 
     if (output_tensors[0] == nullptr || output_tensors[1] == nullptr) {
-      std::cerr<<"Neural network infer fails\n";
+      std::cerr<<"Error: Neural network infer fails\n";
+      printf("Error: Status %d %s\n", TF_GetCode(status), TF_Message(status));
+      TF_DeleteTensor(input_img_tensor[0]);
+      is_successful = false;
       return;
     }
+    //std::cout<<"Output label size is  "<<TF_TensorByteSize(output_tensors[0])<<" bytpes, # of bytes per pixel is "<<TF_TensorByteSize(output_tensors[0]) / input_shape[1] / input_shape[2] <<  std::endl;
     //std::cout<<"Output distribution size is  "<<TF_TensorByteSize(output_tensors[1])<<" bytpes, # of bytes per pixel is "<<TF_TensorByteSize(output_tensors[1]) / input_shape[1] / input_shape[2] <<  std::endl;
 
       
@@ -285,62 +269,21 @@ namespace segmentation_projection {
     float * distribution_flat = static_cast<float *>(TF_TensorData(output_tensors[1]));
 
     // convert to output cv mat and Eigen Mat
-    
     cv::Mat out_label_img(input_shape[1], input_shape[2], CV_32SC1, label_img_flat);
     out_label_img.convertTo(label_output, CV_8UC1);
-    cv::Mat distribution_img(rgb.rows, rgb.cols, CV_32FC(raw_network_output_shape[3]), distribution_flat);
-    distribution_output = out_distribution_img;
-
-    
-    /*
-    cv::Mat classes(rgb.rows, rgb.cols, num_class );
-    //    cv::Mat background(rgb.rows, rgb.cols, )
-    // rgba[0] -> bgr[2], rgba[1] -> bgr[1],
-    // rgba[2] -> bgr[0], rgba[3] -> alpha[0]
-    std::vector<int> channel_ind_map(num_class);
-    for (int i = 0; i != num_class; i++) {
-      channel_ind_map[i] = i;
-      channel_ind_map[i+1] = i;
-    }
-    cv::mixChannels( out_distribution_img, 1, classes, 1, channel_ind_map.data(), num_class);
-    cv::exp(classes, classes);
-    */
-    //if (rgb.rows > out_label_img.rows || rgb.cols > out_label_img.cols) {
-    //   cv::resize(label_output, label_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN  );
-    //  cv::resize(distribution_output, distribution_output, cv::Size(rgb.cols, rgb.rows), 0,0,CV_INTER_NN   );
-    //}
-
-    //Eigen::TensorMap<Eigen::Tensor<float, 3>> dist_map(distribution_flat, rgb.rows, rgb.cols, 3);
-    //Eigen::Tensor<float, 3> distribution_tensor = dist_map;
-    //Eigen::Tensor<float, 1> 
-    
-    /*
-    cv::Mat out_label_original(label_img.dim_size(1), label_img.dim_size(2) , CV_32FC1, label_img);
-    if (input_shape[1] > rgb.rows || input_shape[2] > rgb.cols) {
-      int diff_width = - rgb.cols + input_shape[2];
-      int diff_height = - rgb.rows + input_shape[1];
-      cv::Mat pRoi = out_label_original(cv::Rect(diff_width / 2, diff_height / 2, rgb.cols, rgb.rows));
-      pRoi.copyTo(*out_label_img);
-    }
-    else
-      out_label_original.copyTo(*out_label_img);
-    */
-    
-  //
-    //cv::namedWindow( "Display window", CV_WINDOW_AUTOSIZE );// Create a window for display.
-    //cv::imshow( "Display window", out_label_img);                   // Show our image inside it.
-    //cv::waitKey(0);
-    //cv::imwrite("label.png", label_output);
+    cv::Mat distribution_img(input_shape[1], input_shape[2], CV_32FC(num_class), distribution_flat);
+    distribution_output = distribution_img.clone();
 
     TF_DeleteTensor(input_img_tensor[0]);
     TF_DeleteTensor(output_tensors[0]);
     TF_DeleteTensor(output_tensors[1]);
     
-
-    return;
+    is_successful = true;
+    return ;
     
 
   }
 
-
 }
+
+
