@@ -38,119 +38,129 @@ using namespace std::chrono;
 namespace SegmentationMapping {
   
   class LidarProjection {
-    public:
-      LidarProjection()
-      {
-      	ros::NodeHandle nh("~");
-        get_params(nh);
+  public:
+    LidarProjection()
+    {
+      ros::NodeHandle nh("~");
+      get_params(nh);
         
-        // file.open("/home/fangkd/Desktop/time.txt");
-        pcl_pub = nh.advertise<sensor_msgs::PointCloud>(Pub_Topic_, 5);
-        pcl_sub.subscribe(nh, cloud_topic_, 50);
-        img_sub.subscribe(nh, image_topic_, 50);
-        cam_sub.subscribe(nh, cam_info_, 50);
-        dist_sub.subscribe(nh, dist_info_, 5);
-        sync_.reset(new Sync(MySyncPolicy(200), pcl_sub, img_sub, 
-                             cam_sub, dist_sub));
-        sync_->registerCallback(boost::bind(&LidarProjection::callback, 
-                                            this, _1, _2, _3, _4));
+      pcl_pub = nh.advertise<sensor_msgs::PointCloud>(Pub_Topic_, 5);
+      pcl_sub.subscribe(nh, cloud_topic_, 5);
+      img_sub.subscribe(nh, image_topic_, 10);
+      cam_sub.subscribe(nh, cam_info_, 10);
+      dist_sub.subscribe(nh, dist_info_, 1);
+      sync_.reset(new ApproximateSync(ApproximateSyncPolicy(300), pcl_sub, img_sub, 
+                           cam_sub, dist_sub));
+      //sync_.reset(new ExactSync(ExactSyncPolicy(1000), pcl_sub, img_sub, cam_sub,
+      //                          dist_sub ));
+      sync_->registerCallback(boost::bind(&LidarProjection::callback, 
+                                          this, _1, _2, _3, _4));
 
 
-    label2color[2]  =std::make_tuple(250, 250, 250 ); // road
-    //label2color[3]  =std::make_tuple(128, 64,  128 ); // sidewalk
-    label2color[3]  =std::make_tuple(250, 250,  250 ); // sidewalk
-    label2color[5]  =std::make_tuple(250, 128, 0   ); // building
-    label2color[10] =std::make_tuple(192, 192, 192 ); // pole
-    label2color[12] =std::make_tuple(250, 250, 0   ); // sign
-    label2color[6]  =std::make_tuple(0  , 100, 0   ); // vegetation
-    label2color[4]  =std::make_tuple(128, 128, 0   ); // terrain
-    label2color[13] =std::make_tuple(135, 206, 235 ); // sky
-    label2color[1]  =std::make_tuple( 30, 144, 250 ); // water
-    label2color[8]  =std::make_tuple(220, 20,  60  ); // person
-    label2color[7]  =std::make_tuple( 0, 0,142     ); // car
-    label2color[9]  =std::make_tuple(119, 11, 32   ); // bike
-    label2color[11] =std::make_tuple(123, 104, 238 ); // stair
-    label2color[0]  =std::make_tuple(255, 255, 255 ); // background
+      label2color[2]  =std::make_tuple(250, 250, 250 ); // road
+      //label2color[3]  =std::make_tuple(128, 64,  128 ); // sidewalk
+      label2color[3]  =std::make_tuple(250, 250,  250 ); // sidewalk
+      label2color[5]  =std::make_tuple(250, 128, 0   ); // building
+      label2color[10] =std::make_tuple(192, 192, 192 ); // pole
+      label2color[12] =std::make_tuple(250, 250, 0   ); // sign
+      label2color[6]  =std::make_tuple(0  , 100, 0   ); // vegetation
+      label2color[4]  =std::make_tuple(128, 128, 0   ); // terrain
+      label2color[13] =std::make_tuple(135, 206, 235 ); // sky
+      label2color[1]  =std::make_tuple( 30, 144, 250 ); // water
+      label2color[8]  =std::make_tuple(220, 20,  60  ); // person
+      label2color[7]  =std::make_tuple( 0, 0,142     ); // car
+      label2color[9]  =std::make_tuple(119, 11, 32   ); // bike
+      label2color[11] =std::make_tuple(123, 104, 238 ); // stair
+      label2color[0]  =std::make_tuple(255, 255, 255 ); // background
 
-      }
+    }
 
-      void get_params(ros::NodeHandle &nh_);
-      // Getting rostopics and extrinsic matrix from launch file.
+    void get_params(ros::NodeHandle &nh_);
+    // Getting rostopics and extrinsic matrix from launch file.
 
-      Matrix4f vector2matrix(vector<float> input);
-      // Converting from [x y z qx qy qz qw] into transformation matrix.
+    Matrix4f vector2matrix(vector<float> input);
+    // Converting from [x y z qx qy qz qw] into transformation matrix.
 
-      MatrixXf removePoints(const MatrixXf& matrix, vector<int> true_rows);
+    MatrixXf removePoints(const MatrixXf& matrix, vector<int> true_rows);
 
-      MatrixXf dist_info(const MatrixXf& matrix, vector<int> true_rows);
-      // vector true_rows contains the points idx we want to keep.
-      // Discarding points from matrix.
+    MatrixXf dist_info(const MatrixXf& matrix, vector<int> true_rows);
+    // vector true_rows contains the points idx we want to keep.
+    // Discarding points from matrix.
       
-      vector<int> depth_color(MatrixXf& depth);
+    vector<int> depth_color(MatrixXf& depth);
 
-      MatrixXf point_in_frame(const MatrixXf& point, const MatrixXf& dists);
+    MatrixXf point_in_frame(const MatrixXf& point, const MatrixXf& dists);
 
-      MatrixXf velo_point_filter(MatrixXf& velo_data);
-      // Getting points in camera frame.
+    MatrixXf velo_point_filter(MatrixXf& velo_data);
+    // Getting points in camera frame.
       
-      void set_pointcloud_matrix(const sensor_msgs::PointCloud2ConstPtr& msg);
+    void set_pointcloud_matrix(const sensor_msgs::PointCloud2ConstPtr& msg);
 
-      void set_intrinsic(const sensor_msgs::CameraInfoConstPtr& cam);
+    void set_intrinsic(const sensor_msgs::CameraInfoConstPtr& cam);
 
-      void visualize_results(const sensor_msgs::ImageConstPtr& img);
+    void visualize_results(const sensor_msgs::ImageConstPtr& img);
 
-      void set_label_pcl(                    const sensor_msgs::ImageConstPtr& img,
-                                             const ImageLabelDistribution::ConstPtr& info);
+    void set_label_pcl(                    const sensor_msgs::ImageConstPtr& img,
+                                           const ImageLabelDistribution::ConstPtr& info);
 
-      void callback(const sensor_msgs::PointCloud2ConstPtr& msg, 
-                    const sensor_msgs::ImageConstPtr& img,
-                    const sensor_msgs::CameraInfoConstPtr& cam,
-                    const ImageLabelDistribution::ConstPtr& info);
+    void callback(const sensor_msgs::PointCloud2ConstPtr& msg, 
+                  const sensor_msgs::ImageConstPtr& img,
+                  const sensor_msgs::CameraInfoConstPtr& cam,
+                  const ImageLabelDistribution::ConstPtr& info);
 
-    private:
-      int Lidar_max_range;
+  private:
+    int Lidar_max_range;
 
-      string Pub_Topic_;
-      string cloud_topic_;
-      string image_topic_;
-      string cam_info_;
-      string dist_info_;
+    string Pub_Topic_;
+    string cloud_topic_;
+    string image_topic_;
+    string cam_info_;
+    string dist_info_;
 
-      Matrix4f Extrinsic;
-      sensor_msgs::PointCloud Cloud;
-      sensor_msgs::PointCloud DistriCloud;
-      MatrixXf CloudMat;
-      MatrixXf Intrinsic;
-      vector<int> color_info;
-      vector<int> pcl_info;
-      std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
+    Matrix4f Extrinsic;
+    sensor_msgs::PointCloud Cloud;
+    sensor_msgs::PointCloud DistriCloud;
+    MatrixXf CloudMat;
+    MatrixXf Intrinsic;
+    vector<int> color_info;
+    vector<int> pcl_info;
+    std::unordered_map<int, std::tuple<uint8_t, uint8_t, uint8_t>> label2color;
   
-      message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub;
-      message_filters::Subscriber<sensor_msgs::Image> img_sub;
-      message_filters::Subscriber<sensor_msgs::CameraInfo> cam_sub;
-      message_filters::Subscriber<sensor_msgs::Image> label_sub;
-      message_filters::Subscriber<ImageLabelDistribution> dist_sub;
+    message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub;
+    message_filters::Subscriber<sensor_msgs::Image> img_sub;
+    message_filters::Subscriber<sensor_msgs::CameraInfo> cam_sub;
+    message_filters::Subscriber<sensor_msgs::Image> label_sub;
+    message_filters::Subscriber<ImageLabelDistribution> dist_sub;
 
-      typedef message_filters::sync_policies::ApproximateTime<
-                                      sensor_msgs::PointCloud2,
-                                      sensor_msgs::Image, 
-                                      sensor_msgs::CameraInfo,
-                                      ImageLabelDistribution> MySyncPolicy;
-      typedef message_filters::Synchronizer<MySyncPolicy> Sync;
-      boost::shared_ptr<Sync> sync_;
-      ros::Publisher pcl_pub;
+    typedef message_filters::sync_policies::ExactTime<
+      sensor_msgs::PointCloud2,
+      sensor_msgs::Image,
+      sensor_msgs::CameraInfo,
+      ImageLabelDistribution> ExactSyncPolicy;
 
-      const float MIN_DIS = 0;
-      const float MAX_DIS = 120;
-      int WIDTH, HEIGHT;
-      // ofstream file;
-    public:
-      EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    
+    typedef message_filters::sync_policies::ApproximateTime<
+      sensor_msgs::PointCloud2,
+      sensor_msgs::Image, 
+      sensor_msgs::CameraInfo,
+      ImageLabelDistribution> ApproximateSyncPolicy;
+    typedef message_filters::Synchronizer<ApproximateSyncPolicy> ApproximateSync;
+    typedef message_filters::Synchronizer<ExactSyncPolicy> ExactSync;
+    boost::shared_ptr<ApproximateSync> sync_;
+    //boost::shared_ptr<ExactSync> sync_;
+    ros::Publisher pcl_pub;
+
+    const float MIN_DIS = 0;
+    const float MAX_DIS = 120;
+    int WIDTH, HEIGHT;
+    // ofstream file;
+  public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
   };
 
   void LidarProjection::get_params(ros::NodeHandle &nh_){
     nh_.getParam("lidar_max_range", Lidar_max_range);
-  	nh_.getParam("publish_to", Pub_Topic_);
+    nh_.getParam("publish_to", Pub_Topic_);
     nh_.getParam("cloud_topic", cloud_topic_);
     nh_.getParam("image_topic", image_topic_);
     nh_.getParam("camera_info", cam_info_);
@@ -192,8 +202,8 @@ namespace SegmentationMapping {
   }
 
   MatrixXf LidarProjection::removePoints(const MatrixXf& matrix, 
-  	                                     vector<int> true_rows){
-  	MatrixXf new_matrix;
+                                         vector<int> true_rows){
+    MatrixXf new_matrix;
     new_matrix.resize(2, true_rows.size());
     
     int flag_insert = 0;
@@ -204,7 +214,7 @@ namespace SegmentationMapping {
         assert(flag_true <= matrix.cols());
         assert(flag_insert <= true_rows.size());
         if ((flag_insert >= true_rows.size())|| 
-        	(flag_true >= new_matrix.cols())){
+            (flag_true >= new_matrix.cols())){
           break;
         }
         new_matrix(0, flag_insert) = matrix(0, i)/matrix(2, i);
@@ -268,7 +278,7 @@ namespace SegmentationMapping {
     pointmat.resize(4, point.cols());
     pointmat.block(0, 0, 3, point.cols()) = point;
     pointmat.block(3, 0, 1, point.cols()) = MatrixXf::Constant(
-                                             1, point.cols(), 1);
+                                                               1, point.cols(), 1);
 
     // pointmat.resize(point.rows(), 4);
     // pointmat.block(0, 0, point.rows(), 3) = point;
@@ -281,9 +291,9 @@ namespace SegmentationMapping {
     for (size_t i = 0; i < point.cols(); i++){
       if (pointmat(2, i) > 0){
         if (pointmat(0, i)/pointmat(2, i) >= 0
-         && pointmat(0, i)/pointmat(2, i) < WIDTH-1
-         && pointmat(1, i)/pointmat(2, i) >= 0
-         && pointmat(1, i)/pointmat(2, i) < HEIGHT-1){
+            && pointmat(0, i)/pointmat(2, i) < WIDTH-1
+            && pointmat(1, i)/pointmat(2, i) >= 0
+            && pointmat(1, i)/pointmat(2, i) < HEIGHT-1){
           v.push_back(i);          
         }
       }
@@ -317,7 +327,7 @@ namespace SegmentationMapping {
   }
 
   void LidarProjection::set_pointcloud_matrix(
-  	   const sensor_msgs::PointCloud2ConstPtr& msg){
+                                              const sensor_msgs::PointCloud2ConstPtr& msg){
     sensor_msgs::convertPointCloud2ToPointCloud(*msg, Cloud);
     // CloudMat.resize(3, Cloud.points.size());
 
@@ -325,7 +335,7 @@ namespace SegmentationMapping {
     int count = 0;
     for (int i = 0; i < Cloud.points.size(); i++){
       if (sqrt(pow(Cloud.points[i].x, 2) + 
-        pow(Cloud.points[i].y, 2) + pow(Cloud.points[i].z, 2)) <= Lidar_max_range){
+               pow(Cloud.points[i].y, 2) + pow(Cloud.points[i].z, 2)) <= Lidar_max_range){
         in_range.push_back(i);
         count += 1;
       }
@@ -344,8 +354,8 @@ namespace SegmentationMapping {
   }
 
   void LidarProjection::set_intrinsic(
-  	   const sensor_msgs::CameraInfoConstPtr& cam){
-  	Intrinsic.resize(12, 1);
+                                      const sensor_msgs::CameraInfoConstPtr& cam){
+    Intrinsic.resize(12, 1);
     for (size_t j = 0; j < 12; j++){
       Intrinsic(j, 0) = cam->P[j];
     }
@@ -354,12 +364,12 @@ namespace SegmentationMapping {
   }
 
   void LidarProjection::visualize_results(
-  	   const sensor_msgs::ImageConstPtr& img){
-  	cv::Mat image = cv_bridge::toCvCopy(img, "bgr8")->image;
+                                          const sensor_msgs::ImageConstPtr& img){
+    cv::Mat image = cv_bridge::toCvCopy(img, "bgr8")->image;
     cv::cvtColor(image, image, cv::COLOR_BGR2HSV);
     for (size_t j = 0; j < color_info.size(); j++){
       cv::circle(image, cv::Point(round(CloudMat(0, j)),
-                 round(CloudMat(1, j))), 2, 
+                                  round(CloudMat(1, j))), 2, 
                  cv::Scalar(color_info[j], 255, 255), -1);
     }
     cv::cvtColor(image, image, cv::COLOR_HSV2BGR);
@@ -441,6 +451,8 @@ namespace SegmentationMapping {
   {
     ROS_INFO("lidar callback!");
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    ros::Time curr_t = ros::Time::now();
+    ROS_INFO_STREAM("Callback starts at time "<<uint32_t(curr_t.toSec())<<". "<<(uint32_t)curr_t.toNSec() <<", the img time is "<<(uint32_t)img->header.stamp.toSec()<< " "<<(uint32_t)img->header.stamp.toNSec()<<", the lidar time is "<< (uint32_t)msg->header.stamp.toSec()<< " "<<(uint32_t)msg->header.stamp.toNSec()<<", the segmentation time is "<< (uint32_t)info->header.stamp.toSec()<< " "<<(uint32_t)info->header.stamp.toNSec());
 
     set_pointcloud_matrix(msg);
 
@@ -458,8 +470,11 @@ namespace SegmentationMapping {
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>( t2 - t1 ).count();
-    // cout << "1 Frame time: " << duration << endl;
-    // cout << DistriCloud.header << endl;
+    cout << "1 Frame time: " << duration << endl;
+    cout << DistriCloud.header << endl;
+    ros::Time curr_t2 = ros::Time::now();
+    ROS_DEBUG_STREAM("Callback starts at time "<<uint32_t(curr_t.toSec())<<". "<<(uint32_t)curr_t2.toNSec() );
+
     ROS_INFO("Published new cloud.");
 
     // file << duration << "  " << Cloud.points.size() << "  " << pcl_info.size() << endl;

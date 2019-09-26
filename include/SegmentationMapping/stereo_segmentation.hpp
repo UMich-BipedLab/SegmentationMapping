@@ -222,7 +222,7 @@ namespace SegmentationMapping {
     //Eigen::Map<Eigen::MatrixXf> mat(data.data(), h, w);
     //cv::Mat distribution_output = cv::Mat(rows, cols, CV_32FC(uint32_t(distribution_msg->distribution.layout.dim[2].size)), distribution_msg->distribution.data).clone();
     cv::Mat distribution_output = cv::Mat(rows, cols, CV_32FC(NUM_CLASS), const_cast<float*>(distribution_msg->distribution.data.data())).clone();
-    std::cout<<"distribution.data size "<<distribution_output.total() * distribution_output.elemSize()<<std::endl;
+    //std::cout<<"distribution.data size "<<distribution_output.total() * distribution_output.elemSize()<<std::endl;
     
     //tf_infer->segmentation(color, 20, label_output, distribution_output);
     
