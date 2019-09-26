@@ -31,7 +31,7 @@ Outputs (in ROS messages):
 Tested on
 * AlienWare Laptop (running in realtime for the Cassie Blue experiement): 3FPS on i7-6820, 32GB RAM, GTX1070
 * Dell XPS: 5FPS on i7-7700, 32GB RAM, GTX1070.
-* Jetson Xavier: Around 2.7Hz
+* Jetson Xavier: Around 4Hz
 
 ## Dependencies
 ROS: Tested on Kinetic + Ubuntu 16.04, Melodic + Ubuntu 18.04
