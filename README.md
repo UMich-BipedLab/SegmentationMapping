@@ -3,7 +3,7 @@
 * Build 3D Semantic voxel maps, 2D occupancy maps, 2D obstacle distance maps
 
 The [Youtube video of the Cassie Bipedal robot](https://youtu.be/uFyT8zCg1Kk)'s perception and mapping system is powered by this library.
-[![Cassie goes autonomous on Umich's wavefield](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/multi-camera/ytb.png)](https://youtu.be/uFyT8zCg1Kk)
+[![Cassie goes autonomous on Umich's wavefield](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/jetson/youtube.png)](https://youtu.be/uFyT8zCg1Kk)
 
 Here is a semantic map built on NCLT dataset
 ![The Semantic Map build on NCLT dataset](https://raw.githubusercontent.com/UMich-BipedLab/SegmentationMapping/multi-camera/octomap.png "NCLT octomap")
