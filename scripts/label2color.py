@@ -26,3 +26,23 @@ label_to_color = {
     0: (0 ,0, 0),       # background
     background: (0,0,0) # background
 }
+
+label_to_color = {                                                                                                              
+    2: (245,190,133), # road
+    #3: (128, 64,128), # sidewalk
+    3: (234, 190, 133), # sidewalk
+    5: (93,43,77), # building
+    10: (122,21,14), # pole
+    12: (0,0,0 ), # traffic sign
+    6: (211,175, 141), # vegetation
+    4: (26,14, 24 ), # terrain
+    13: ( 140, 60, 78 ),  # sky
+    1: (  0, 0, 0 ),  # water
+    8 :(56, 7, 8), # person
+    7: ( 0, 0,0),  # car
+    9 : (0, 0, 0),# bike
+    11 : (0, 0, 0), # stair
+
+    0: (0 ,0, 0),       # background
+    background: (0,0,0) # background
+}
