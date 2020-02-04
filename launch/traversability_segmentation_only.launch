@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+
+
+
+<launch>
+
+  <param name="use_sim_time" value="true"/> 
+  
+  <node pkg="SegmentationMapping" type="traversability_segmentation_node" name="traversability_segmentation_node" output="screen" required="true">
+
+    <param name="output_folder" type="str" value="/home/ganlu/traversability_seg/" />
+    <param name="neural_net_graph" type="str" value="$(find SegmentationMapping)/config/mobilenet_nclt/optimized_graph_mobilenet_trt32_2019-06-15.pb"/> 
+    <param name="network_image_input_tensor" type="str" value="network/input/Placeholder:0"/>
+    <param name="network_distribution_output_tensor" type="str" value="network/output/ClassDistribution:0"/>
+    <param name="network_label_output_tensor" type="str" value="network/output/ClassIndexPrediction:0"/>
+    <param name="num_classes" type="int" value="14" />
+    <param name="skip_input_img_freq" type="int"    value="1" />
+    <param name="neural_net_input_width" type="int" value="640"/>
+    <param name="neural_net_input_height" type="int" value="480"/>
+
+    <!-- input topic -->
+    <remap from="~color_topic"        to="/camera/color/image_raw" />
+    <remap from="~depth_topic"        to="/camera/aligned_depth_to_color/image_raw" />
+
+  </node>
+
+</launch>

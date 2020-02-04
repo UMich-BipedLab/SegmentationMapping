@@ -1,0 +1,171 @@
+#!/usr/bin/python
+
+
+
+# ros
+import rospy
+import ros_numpy
+import message_filters
+from sensor_msgs.msg import Image, PointCloud2
+from cv_bridge import CvBridge, CvBridgeError
+from std_msgs.msg import Float32MultiArray, MultiArrayLayout, MultiArrayDimension
+from SegmentationMapping.msg import ImageLabelDistribution
+
+# map label to color
+from label2traversability import label_to_traversability
+from NeuralNetConfigs import NeuralNetConfigs
+# visualize pcl
+#from helper import publish_pcl_pc2_label
+
+import cv2, time
+import numpy as np
+from threading import Lock
+from scipy.ndimage import rotate, zoom
+
+import sys, os
+if sys.version_info[0] < 3:
+    import Queue as queue
+else:
+    import queue
+
+import tensorflow as tf
+    
+# debug
+import pdb
+
+
+
+class SegmentationNode:
+    def __init__(self):
+
+        rospy.init_node('~', anonymous=True)
+        
+        self.output_folder = rospy.get_param("~output_folder")
+
+	self.network_config = NeuralNetConfigs(rospy.get_param("~neural_net_graph"),\
+                                               rospy.get_param("~num_classes"),\
+                                               rospy.get_param("~network_image_input_tensor"),\
+                                               "", \
+                                               rospy.get_param("~neural_net_input_width"),\
+                                               rospy.get_param("~neural_net_input_height"), \
+                                               rospy.get_param("~network_label_output_tensor"),\
+                                               rospy.get_param("~network_distribution_output_tensor"))
+        print(self.network_config)
+        self.tf_init()
+
+        self.labeled_img_pub = rospy.Publisher("~label_topic",
+                                               Image, queue_size=1)
+        self.distribution_pub = rospy.Publisher("~distribution_topic",
+                                                ImageLabelDistribution, queue_size=1)
+        self.distribution_at_lidar_time_pub = rospy.Publisher("~distribution_at_lidar_time_topic",
+                                                              ImageLabelDistribution, queue_size=1)
+        #self.sub = rospy.Subscriber('~color_topic', Image, self.callback)
+        self.input_rgb_img_ = message_filters.Subscriber('~color_topic',
+                                                         Image,  queue_size=5)
+
+        self.input_lidar_ = message_filters.Subscriber('/velodyne_points', PointCloud2, queue_size=1)
+        ts = message_filters.ApproximateTimeSynchronizer([self.input_rgb_img_, self.input_lidar_], 50, 0.04)
+        ts.registerCallback(self.callback)
+
+        
+        self.skip_img_freq = rospy.get_param('~skip_input_img_freq')
+        self.counter = 0
+        self.bridge = CvBridge()
+        
+
+    def callback(self, img_msg, lidar_msg):        
+        print("segmentaion call back")
+        if self.counter % self.skip_img_freq != 0:
+            self.counter += 1
+            return
+        else:
+            self.counter += 1
+        now  = rospy.Time.now()
+        rospy.loginfo("New callback time %i %i, img_time: %i %i, depth_time %i %i", now.secs, now.nsecs, img_msg.header.stamp.secs, img_msg.header.stamp.nsecs, lidar_msg.header.stamp.secs, lidar_msg.header.stamp.nsecs )
+        #rospy.loginfo("New callback time %i %i, img_time: %i %i", now.secs, now.nsecs, img_msg.header.stamp.secs, img_msg.header.stamp.nsecs )
+        original_img = self.bridge.imgmsg_to_cv2(img_msg , desired_encoding="rgb8")
+        #original_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
+        
+	## semantic label to traversability label
+	labeled_img, distribution = self.infer(original_img)
+	for r in range(labeled_img.shape[0]):
+          for c in range(labeled_img.shape[1]):
+	    labeled_img[r, c] = label_to_traversability[labeled_img[r, c]]
+	
+	self.save_labeled_img(labeled_img, img_msg.header)
+        #self.publish_label_and_distribution(labeled_img, distribution, img_msg.header, lidar_msg.header)
+        
+    def tf_init(self):
+        print("open graph..")
+        with tf.gfile.GFile(self.network_config.path, 'rb') as f:
+            self.graph_def = tf.GraphDef()
+            self.graph_def.ParseFromString(f.read())
+        print("open graph complete")
+
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        self.sess = tf.Session(config=config)
+        self.y, = tf.import_graph_def(self.graph_def, return_elements=[self.network_config.label_output_tensor], name='')
+        self.G = tf.get_default_graph() 
+        self.x = self.G.get_tensor_by_name(self.network_config.image_input_tensor)
+        
+        self.dist = self.G.get_tensor_by_name(self.network_config.distribution_output_tensor)
+        tf.global_variables_initializer().run(session=self.sess)
+        print("Tf init finish")
+
+    def save_labeled_img(self, labeled_img, header):
+	timestamp = header.stamp.to_nsec()
+	img_name = self.output_folder + str(timestamp) + ".png"
+	cv2.imwrite(img_name, labeled_img)	
+
+    def infer(self, rgb_img):
+
+        num_class = self.network_config.num_classes
+
+        #if rgb_img.shape[0] != self.network_config.input_height or \
+        #   rgb_img.shape[1] != self.network_config.input_width:
+        #    rgb = cv2.resize(rgb_img, \
+        #                     dsize=(self.network_config.input_width, self.network_config.input_height),\
+        #                     interpolation=cv2.INTER_CUBIC)
+        #else:
+        #    rgb = rgb_img
+        
+        rgb = rgb_img 
+        rgb = np.expand_dims(rgb, axis=0)
+        
+        label_out, dist_out = self.sess.run([self.y, self.dist], feed_dict={self.x: rgb})
+        
+        now  = rospy.Time.now()
+
+        dist_out = dist_out[0, :, :, :]
+        label_out = label_out[0, :, : ].astype(np.uint8)
+        rospy.loginfo("after segmentation time %i %i", now.secs, now.nsecs )
+        
+        '''
+        dist_exp = np.exp(dist_out)
+        dist_class = dist_exp
+        #dist_class = zoom(dist_exp, (1.2, 640.0/800 , 1)).astype(np.float32)
+        dist_sum = np.sum(dist_class, axis=2, keepdims=1)
+
+        dist_class = dist_class / dist_sum
+        assert(np.sum(dist_class[1,1,:]) > 0.99 and np.sum(dist_class[1,1,:]) < 1.01)
+        background_sum = np.sum(dist_class[:, :, num_class:], axis=2)
+        dist_class = dist_class[:, :, :num_class]
+        dist_class[:,:,0] += background_sum
+        assert(np.sum(dist_class[1,1,:]) > 0.99 and np.sum(dist_class[1,1,:]) < 1.01)
+        label_img = np.argmax(dist_class, axis=2).astype(np.uint8)
+        print (label_img.dtype)
+        #label_img = cv2.resize(label_img, \
+        #                 dsize=(rgb_img.shape[1], rgb_img.shape[0]),\
+        #                       interpolation=cv2.INTER_NEAREST).astype(np.uint8)
+
+        '''
+
+        return label_out, dist_out
+
+    def spin(self):
+        rospy.spin()
+
+if __name__ == "__main__":
+    node = SegmentationNode()
+    node.spin()
