@@ -15,12 +15,13 @@ images = dir(fullfile(rgb_folder, '*.png'));
 %% Generate training data
 for i = 1: size(images)
     image_name = images(i).name;
+    %image_name = '1569971103023503552.png';
     rgb_img = imread(rgb_folder + image_name);
     try
         segmentation_img = imread(segmentation_folder + image_name);
         projection_img = imread(projection_folder + image_name);
         final_img = uint8(and(segmentation_img, projection_img));
-        %imagesc(final_img)
+        imagesc(final_img)
         imwrite(final_img, label_train_folder + image_name);
         imwrite(rgb_img, image_train_folder + image_name);
     catch
@@ -46,3 +47,29 @@ for i = 1 : size(valid_images)
         continue
     end
 end
+
+%% Generate visuals
+colored_img = rgb_img;
+for i = 1 : size(final_img, 1)
+    for j = 1 : size(final_img, 2)
+        if (projection_img(i,j) == 0)
+            %colored_img(i, j, 1) = 128;
+            %colored_img(i, j, 2) = 62;
+            %colored_img(i, j, 3) = 128;
+            colored_img(i, j, 1) = 255;
+            colored_img(i, j, 2) = 0;
+            colored_img(i, j, 3) = 0;
+        else
+            %colored_img(i, j, 1) = 235;
+            %colored_img(i, j, 2) = 51;
+            %colored_img(i, j, 3) = 232;
+            colored_img(i, j, 1) = 0;
+            colored_img(i, j, 2) = 0;
+            colored_img(i, j, 3) = 255;
+        end
+
+    end    
+end
+
+combined_img = colored_img * 0.5 + rgb_img * 0.5;
+imshow(combined_img)
