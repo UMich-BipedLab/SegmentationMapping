@@ -50,6 +50,7 @@ C++: `pcl`, `eigen`, `OpenCV`
 
 ros thirdparty: 
 * [`semantic octomap`](https://github.com/UMich-BipedLab/octomap.git): Modified octomap, supporting Bayesian updates for semantic label fusion
+* [`octomap_ros`](https://github.com/OctoMap/octomap_ros): Put it in the same catkin workspace as the SegmentationMappping repo.
 * [`ros_numpy`](https://github.com/eric-wieser/ros_numpy)
 
 ## Compiling
