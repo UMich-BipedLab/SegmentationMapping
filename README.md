@@ -55,7 +55,7 @@ ros thirdparty:
 * [`ros_numpy`](https://github.com/eric-wieser/ros_numpy): Put it in the same catkin workspace as the SegmentationMappping repo.
 
 ## Compiling
-Make sure that your semantic octomap is build. Then run 
+Make sure that your semantic octomap is build. Make sure that you haven't install the native `octomap` and `octomap_ros` from `apt-get`. Then run 
 `catkin_make install  -DCMAKE_BUILD_TYPE=Release -DOCTOMAP_DIR=${you_octomap_source_directory}/lib/cmake/octomap/ --pkg SegmentationMapping`
 
 ## launchfiles
