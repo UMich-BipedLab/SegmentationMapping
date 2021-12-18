@@ -51,11 +51,12 @@ C++: `pcl`, `eigen`, `OpenCV`
 ros thirdparty: 
 * [`semantic octomap`](https://github.com/UMich-BipedLab/octomap.git): Modified octomap, supporting Bayesian updates for semantic label fusion
 * [`octomap_ros`](https://github.com/OctoMap/octomap_ros): Put it in the same catkin workspace as the SegmentationMappping repo.
-* [`ros_numpy`](https://github.com/eric-wieser/ros_numpy)
+* [`octomap_msgs`](https://github.com/OctoMap/octomap_msgs): Put it in the same catkin workspace as the SegmentationMappping repo.
+* [`ros_numpy`](https://github.com/eric-wieser/ros_numpy): Put it in the same catkin workspace as the SegmentationMappping repo.
 
 ## Compiling
 Make sure that your semantic octomap is build. Then run 
-`catkin_make install  -DCMAKE_BUILD_TYPE=Release -Doctomap_DIR=${you_octomap_source_directory}/lib/cmake/octomap/ --pkg SegmentationMapping`
+`catkin_make install  -DCMAKE_BUILD_TYPE=Release -DOCTOMAP_DIR=${you_octomap_source_directory}/lib/cmake/octomap/ --pkg SegmentationMapping`
 
 ## launchfiles
 * run on Cassie with a single stereo camera (Intel Realsense): `roslaunch SegmentationMapping cassie_stereo_py.launch`
